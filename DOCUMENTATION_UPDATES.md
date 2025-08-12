@@ -6,7 +6,11 @@ This document summarizes all the documentation updates made to reflect the lates
 
 ### Core Documentation Files
 
-1. **docs/README.md**
+1. **docs/_coverpage.md**
+   - Updated logo reference from placeholder to actual Gowright logo (gowright_logo.png)
+   - Improved visual branding consistency across documentation
+
+2. **docs/README.md**
    - Added comprehensive mobile testing description
    - Added OpenAPI testing module description
    - Updated testing modules section with OpenAPI testing
