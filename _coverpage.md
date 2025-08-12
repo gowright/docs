@@ -1,6 +1,6 @@
 <!-- docs/_coverpage.md -->
 
-![logo](https://via.placeholder.com/200x200/2196f3/ffffff?text=GW)
+![logo](gowright_logo.png)
 
 # Gowright Testing Framework
 
