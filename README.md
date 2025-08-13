@@ -21,7 +21,7 @@ Browser automation using Chrome DevTools Protocol via [go-rod/rod](https://githu
 <div>
 
 ### 📱 Mobile Testing
-Comprehensive native mobile app automation using Appium WebDriver protocol for Android and iOS with advanced touch gestures, device management, and cross-platform testing capabilities
+Comprehensive native mobile app automation using Appium WebDriver protocol for Android and iOS with advanced touch gestures, device management, mobile web testing, and cross-platform testing capabilities. Includes complete session management, screenshot capture, and seamless integration with GoWright test suites.
 
 </div>
 
@@ -159,7 +159,12 @@ func main() {
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](contributing/guide.md) for details.
+We welcome contributions! Please see our contributing documentation:
+
+- [Development Setup](contributing/development.md) - Development environment setup
+- [Contributing Guide](contributing/guide.md) - Contribution guidelines and process
+- [Deployment & CI/CD](contributing/deployment.md) - Automated deployment and publishing workflows
+- [Changelog](contributing/changelog.md) - Version history and changes
 
 ## 📄 License
 

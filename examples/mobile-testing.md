@@ -1,4 +1,4 @@
-# Mobile Testing Examples
+# Mobile Testing Examples (1/5 - 20% Complete)
 
 This document provides comprehensive examples of mobile application testing using the GoWright framework's Appium integration. These examples demonstrate real-world scenarios for both Android and iOS platforms.
 
@@ -7,9 +7,11 @@ This document provides comprehensive examples of mobile application testing usin
 1. [Basic Setup Examples](#basic-setup-examples)
 2. [Android Testing Examples](#android-testing-examples)
 3. [iOS Testing Examples](#ios-testing-examples)
-4. [Cross-Platform Testing](#cross-platform-testing)
-5. [Advanced Scenarios](#advanced-scenarios)
-6. [Integration with GoWright Framework](#integration-with-gowright-framework)
+4. [Mobile Web Testing](#mobile-web-testing)
+5. [Cross-Platform Testing](#cross-platform-testing)
+6. [Advanced Scenarios](#advanced-scenarios)
+7. [Integration with GoWright Framework](#integration-with-gowright-framework)
+8. [Comprehensive Testing Example](#comprehensive-testing-example)
 
 ## Basic Setup Examples
 
@@ -963,3 +965,593 @@ func TestMobilePerformance(t *testing.T) {
 ```
 
 These examples demonstrate comprehensive mobile testing scenarios using the GoWright framework's Appium integration. They cover basic setup, platform-specific testing, cross-platform scenarios, advanced features, and integration with the broader GoWright testing framework.
+#
+# Mobile Web Testing
+
+### Testing Web Applications on Mobile Devices
+
+Mobile web testing allows you to test web applications running in mobile browsers, providing a bridge between traditional web testing and native mobile app testing.
+
+```go
+func testMobileWebApplication() {
+    client := gowright.NewAppiumClient("http://localhost:4723")
+    ctx := context.Background()
+    
+    // Configure for mobile web testing
+    caps := gowright.AppiumCapabilities{
+        PlatformName:      "Android",
+        PlatformVersion:   "11",
+        DeviceName:        "emulator-5554",
+        AutomationName:    "UiAutomator2",
+        NoReset:           true,
+        NewCommandTimeout: 60,
+    }
+    
+    if err := client.CreateSession(ctx, caps); err != nil {
+        log.Fatalf("Failed to create mobile web session: %v", err)
+    }
+    defer client.DeleteSession(ctx)
+    
+    fmt.Println("Testing mobile web application...")
+    
+    // Launch Chrome browser
+    if err := client.StartActivity(ctx, "com.android.chrome", "com.google.android.apps.chrome.Main"); err != nil {
+        log.Fatalf("Failed to start Chrome: %v", err)
+    }
+    
+    time.Sleep(3 * time.Second)
+    
+    // Navigate to website
+    addressBar, err := client.WaitForElement(ctx, gowright.ByID, "com.android.chrome:id/url_bar", 10*time.Second)
+    if err != nil {
+        log.Fatalf("Failed to find address bar: %v", err)
+    }
+    
+    if err := addressBar.Click(ctx); err != nil {
+        log.Fatalf("Failed to click address bar: %v", err)
+    }
+    
+    if err := addressBar.SendKeys(ctx, "https://example.com"); err != nil {
+        log.Fatalf("Failed to type URL: %v", err)
+    }
+    
+    fmt.Println("Successfully navigated to website")
+    
+    // Test mobile-specific interactions
+    width, height, err := client.GetWindowSize(ctx)
+    if err == nil {
+        fmt.Printf("Mobile screen size: %dx%d\n", width, height)
+        
+        // Test mobile gestures on web content
+        if err := client.Swipe(ctx, width/2, height/2, width/2, height/4, 1000); err != nil {
+            log.Printf("Failed to perform swipe gesture: %v", err)
+        } else {
+            fmt.Println("Mobile swipe gesture performed on web content")
+        }
+    }
+    
+    // Get page source for analysis
+    source, err := client.GetPageSource(ctx)
+    if err == nil {
+        fmt.Printf("Page source retrieved: %d characters\n", len(source))
+    }
+}
+```
+
+### Mobile Browser Configuration
+
+```go
+// Configure for different mobile browsers
+func configureMobileBrowser(browserType string) gowright.AppiumCapabilities {
+    baseCaps := gowright.AppiumCapabilities{
+        PlatformName:   "Android",
+        DeviceName:     "emulator-5554",
+        AutomationName: "UiAutomator2",
+    }
+    
+    switch browserType {
+    case "chrome":
+        // Chrome browser testing
+        return baseCaps
+    case "firefox":
+        baseCaps.AppPackage = "org.mozilla.firefox"
+        baseCaps.AppActivity = "org.mozilla.gecko.BrowserApp"
+        return baseCaps
+    default:
+        return baseCaps
+    }
+}
+```
+
+## Comprehensive Testing Example (`mobile-testing/mobile_comprehensive.go`) ✅
+
+The comprehensive mobile testing example demonstrates complete mobile testing capabilities including Android, iOS, and mobile web testing with Appium integration.
+
+**Key Features Demonstrated:**
+- Android and iOS app testing
+- Mobile web testing
+- Touch gestures and interactions
+- Appium integration with GoWright
+- Cross-platform testing patterns
+- Screenshot capture and validation
+- Device orientation and window management
+
+**Example Usage:**
+```bash
+go run examples/mobile-testing/mobile_comprehensive.go
+```
+
+**Testing Capabilities:**
+- Native Android app automation
+- Native iOS app automation
+- Mobile web browser testing
+- Cross-platform test execution
+- Device gesture simulation
+- Screenshot and evidence capture
+- Performance monitoring
+- Session management
+
+### Planned Mobile Testing Examples
+
+#### Android-Specific Testing (`mobile-testing/mobile_android.go`) ⏳ **PLANNED**
+Dedicated Android app testing with platform-specific features.
+
+**Planned Features:**
+- Android-specific UI elements
+- Intent handling
+- Background app testing
+- Android permissions
+- Device-specific testing
+
+#### iOS-Specific Testing (`mobile-testing/mobile_ios.go`) ⏳ **PLANNED**
+Dedicated iOS app testing with platform-specific features.
+
+**Planned Features:**
+- iOS-specific UI elements
+- App lifecycle management
+- iOS permissions and alerts
+- Simulator-specific testing
+- Device-specific testing
+
+#### Touch Gestures (`mobile-testing/mobile_gestures.go`) ⏳ **PLANNED**
+Comprehensive touch gesture testing and validation.
+
+**Planned Features:**
+- Tap, double-tap, long press
+- Swipe and scroll gestures
+- Pinch and zoom
+- Multi-touch gestures
+- Gesture recognition
+
+#### Mobile Performance (`mobile-testing/mobile_performance.go`) ⏳ **PLANNED**
+Mobile app performance testing and monitoring.
+
+**Planned Features:**
+- App launch time measurement
+- Memory usage monitoring
+- Battery usage testing
+- Network performance
+- Resource utilization
+
+The following example demonstrates a complete mobile testing workflow that includes Android native app testing, iOS native app testing, mobile web testing, and integration with the GoWright framework.
+
+### Complete Mobile Testing Suite
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "time"
+    
+    "github.com/gowright/framework/pkg/gowright"
+)
+
+func main() {
+    fmt.Println("=== Gowright Mobile Testing - Comprehensive Examples ===\n")
+    
+    // Create a new Appium client
+    client := gowright.NewAppiumClient("http://localhost:4723")
+    ctx := context.Background()
+    
+    // Example 1: Android App Testing
+    fmt.Println("1. Android App Testing Example")
+    if err := androidAppExample(ctx, client); err != nil {
+        log.Printf("Android example failed: %v", err)
+    }
+    
+    // Example 2: iOS App Testing
+    fmt.Println("\n2. iOS App Testing Example")
+    if err := iOSAppExample(ctx, client); err != nil {
+        log.Printf("iOS example failed: %v", err)
+    }
+    
+    // Example 3: Web App Testing on Mobile
+    fmt.Println("\n3. Mobile Web Testing Example")
+    if err := mobileWebExample(ctx, client); err != nil {
+        log.Printf("Mobile web example failed: %v", err)
+    }
+    
+    // Example 4: Appium with GoWright Framework Integration
+    fmt.Println("\n4. Appium with GoWright Framework Integration")
+    appiumWithGoWrightExample()
+    
+    // Generate comprehensive mobile testing report
+    fmt.Println("\nGenerating Mobile Testing Report...")
+    generateMobileTestingReport()
+    
+    fmt.Println("\n=== Mobile Testing Complete ===")
+}
+
+func androidAppExample(ctx context.Context, client *gowright.AppiumClient) error {
+    fmt.Println("📱 Testing Android Calculator App")
+    
+    // Define Android capabilities
+    caps := gowright.AppiumCapabilities{
+        PlatformName:      "Android",
+        PlatformVersion:   "11",
+        DeviceName:        "emulator-5554",
+        AppPackage:        "com.android.calculator2",
+        AppActivity:       ".Calculator",
+        AutomationName:    "UiAutomator2",
+        NoReset:           true,
+        NewCommandTimeout: 60,
+    }
+    
+    // Create session
+    fmt.Println("Creating Android session...")
+    if err := client.CreateSession(ctx, caps); err != nil {
+        return fmt.Errorf("failed to create Android session: %w", err)
+    }
+    defer func() {
+        fmt.Println("Closing Android session...")
+        if err := client.DeleteSession(ctx); err != nil {
+            log.Printf("Failed to delete session: %v", err)
+        }
+    }()
+    
+    fmt.Printf("✅ Session created with ID: %s\n", client.GetSessionID())
+    
+    // Wait for the calculator to load
+    time.Sleep(2 * time.Second)
+    
+    // Find and click number buttons to perform calculation: 5 + 3 = 8
+    fmt.Println("Performing calculation: 5 + 3 = 8")
+    
+    // Click number 5
+    num5, err := client.WaitForElementClickable(ctx, gowright.ByID, "com.android.calculator2:id/digit_5", 10*time.Second)
+    if err != nil {
+        return fmt.Errorf("failed to find number 5: %w", err)
+    }
+    if err := num5.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click number 5: %w", err)
+    }
+    
+    // Click plus button
+    plus, err := client.FindElement(ctx, gowright.ByID, "com.android.calculator2:id/op_add")
+    if err != nil {
+        return fmt.Errorf("failed to find plus button: %w", err)
+    }
+    if err := plus.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click plus button: %w", err)
+    }
+    
+    // Click number 3
+    num3, err := client.FindElement(ctx, gowright.ByID, "com.android.calculator2:id/digit_3")
+    if err != nil {
+        return fmt.Errorf("failed to find number 3: %w", err)
+    }
+    if err := num3.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click number 3: %w", err)
+    }
+    
+    // Click equals button
+    equals, err := client.FindElement(ctx, gowright.ByID, "com.android.calculator2:id/eq")
+    if err != nil {
+        return fmt.Errorf("failed to find equals button: %w", err)
+    }
+    if err := equals.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click equals button: %w", err)
+    }
+    
+    // Get the result
+    result, err := client.FindElement(ctx, gowright.ByID, "com.android.calculator2:id/result")
+    if err != nil {
+        return fmt.Errorf("failed to find result: %w", err)
+    }
+    
+    resultText, err := result.GetText(ctx)
+    if err != nil {
+        return fmt.Errorf("failed to get result text: %w", err)
+    }
+    
+    fmt.Printf("✅ Calculation result: %s\n", resultText)
+    
+    // Take a screenshot
+    fmt.Println("Taking screenshot...")
+    screenshot, err := client.TakeScreenshot(ctx)
+    if err != nil {
+        return fmt.Errorf("failed to take screenshot: %w", err)
+    }
+    fmt.Printf("✅ Screenshot captured (length: %d bytes)\n", len(screenshot))
+    
+    // Test touch actions
+    fmt.Println("Testing touch actions...")
+    width, height, err := client.GetWindowSize(ctx)
+    if err != nil {
+        return fmt.Errorf("failed to get window size: %w", err)
+    }
+    fmt.Printf("Screen size: %dx%d\n", width, height)
+    
+    // Perform a swipe gesture
+    if err := client.Swipe(ctx, width/2, height/2, width/2, height/4, 1000); err != nil {
+        return fmt.Errorf("failed to perform swipe: %w", err)
+    }
+    fmt.Println("✅ Swipe gesture performed")
+    
+    return nil
+}
+
+func iOSAppExample(ctx context.Context, client *gowright.AppiumClient) error {
+    fmt.Println("📱 Testing iOS Calculator App")
+    
+    // Define iOS capabilities
+    caps := gowright.AppiumCapabilities{
+        PlatformName:      "iOS",
+        PlatformVersion:   "15.0",
+        DeviceName:        "iPhone 13 Simulator",
+        BundleID:          "com.apple.calculator",
+        AutomationName:    "XCUITest",
+        NoReset:           true,
+        NewCommandTimeout: 60,
+    }
+    
+    // Create session
+    fmt.Println("Creating iOS session...")
+    if err := client.CreateSession(ctx, caps); err != nil {
+        return fmt.Errorf("failed to create iOS session: %w", err)
+    }
+    defer func() {
+        fmt.Println("Closing iOS session...")
+        if err := client.DeleteSession(ctx); err != nil {
+            log.Printf("Failed to delete session: %v", err)
+        }
+    }()
+    
+    fmt.Printf("✅ Session created with ID: %s\n", client.GetSessionID())
+    
+    // Wait for the calculator to load
+    time.Sleep(2 * time.Second)
+    
+    // Find and click number buttons using iOS locators
+    fmt.Println("Performing calculation: 7 + 2 = 9")
+    
+    // Click number 7 using accessibility ID
+    num7, err := client.WaitForElementClickable(ctx, gowright.ByAccessibilityID, "7", 10*time.Second)
+    if err != nil {
+        return fmt.Errorf("failed to find number 7: %w", err)
+    }
+    if err := num7.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click number 7: %w", err)
+    }
+    
+    // Click plus button
+    plus, err := client.FindElement(ctx, gowright.ByAccessibilityID, "+")
+    if err != nil {
+        return fmt.Errorf("failed to find plus button: %w", err)
+    }
+    if err := plus.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click plus button: %w", err)
+    }
+    
+    // Click number 2
+    num2, err := client.FindElement(ctx, gowright.ByAccessibilityID, "2")
+    if err != nil {
+        return fmt.Errorf("failed to find number 2: %w", err)
+    }
+    if err := num2.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click number 2: %w", err)
+    }
+    
+    // Click equals button
+    equals, err := client.FindElement(ctx, gowright.ByAccessibilityID, "=")
+    if err != nil {
+        return fmt.Errorf("failed to find equals button: %w", err)
+    }
+    if err := equals.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click equals button: %w", err)
+    }
+    
+    // Test iOS-specific locators
+    fmt.Println("Testing iOS-specific locators...")
+    
+    // Using iOS predicate locators
+    by, value := gowright.IOS.Label("Calculator")
+    elements, err := client.FindElements(ctx, by, value)
+    if err == nil {
+        fmt.Printf("✅ Found %d elements with label 'Calculator'\n", len(elements))
+    }
+    
+    // Test device orientation
+    orientation, err := client.GetOrientation(ctx)
+    if err == nil {
+        fmt.Printf("✅ Current orientation: %s\n", orientation)
+    }
+    
+    return nil
+}
+
+func mobileWebExample(ctx context.Context, client *gowright.AppiumClient) error {
+    fmt.Println("🌐 Testing Mobile Web Application")
+    
+    // Define capabilities for mobile web testing
+    caps := gowright.AppiumCapabilities{
+        PlatformName:      "Android",
+        PlatformVersion:   "11",
+        DeviceName:        "emulator-5554",
+        AutomationName:    "UiAutomator2",
+        NoReset:           true,
+        NewCommandTimeout: 60,
+    }
+    
+    // Create session
+    fmt.Println("Creating mobile web session...")
+    if err := client.CreateSession(ctx, caps); err != nil {
+        return fmt.Errorf("failed to create mobile web session: %w", err)
+    }
+    defer func() {
+        fmt.Println("Closing mobile web session...")
+        if err := client.DeleteSession(ctx); err != nil {
+            log.Printf("Failed to delete session: %v", err)
+        }
+    }()
+    
+    fmt.Printf("✅ Session created with ID: %s\n", client.GetSessionID())
+    
+    // Open Chrome browser
+    fmt.Println("Opening Chrome browser...")
+    if err := client.StartActivity(ctx, "com.android.chrome", "com.google.android.apps.chrome.Main"); err != nil {
+        return fmt.Errorf("failed to start Chrome: %w", err)
+    }
+    
+    time.Sleep(3 * time.Second)
+    
+    // Find the address bar and navigate to a website
+    fmt.Println("Navigating to example.com...")
+    addressBar, err := client.WaitForElement(ctx, gowright.ByID, "com.android.chrome:id/url_bar", 10*time.Second)
+    if err != nil {
+        return fmt.Errorf("failed to find address bar: %w", err)
+    }
+    
+    if err := addressBar.Click(ctx); err != nil {
+        return fmt.Errorf("failed to click address bar: %w", err)
+    }
+    
+    if err := addressBar.SendKeys(ctx, "https://example.com"); err != nil {
+        return fmt.Errorf("failed to type URL: %w", err)
+    }
+    
+    fmt.Println("✅ Mobile web navigation example completed")
+    
+    // Test page source retrieval
+    fmt.Println("Getting page source...")
+    source, err := client.GetPageSource(ctx)
+    if err == nil {
+        fmt.Printf("✅ Page source length: %d characters\n", len(source))
+    }
+    
+    return nil
+}
+
+// appiumWithGoWrightExample demonstrates using Appium with the GoWright testing framework
+func appiumWithGoWrightExample() {
+    fmt.Println("🔗 Integrating Appium with GoWright Framework")
+    
+    // Create a test suite that uses Appium
+    suite := gowright.NewTestSuite("Mobile App Tests")
+    
+    // Add mobile test cases
+    suite.AddTestFunc("Android Calculator Test", func(t *gowright.TestContext) {
+        client := gowright.NewAppiumClient("http://localhost:4723")
+        ctx := context.Background()
+        
+        caps := gowright.AppiumCapabilities{
+            PlatformName:   "Android",
+            DeviceName:     "emulator-5554",
+            AppPackage:     "com.android.calculator2",
+            AppActivity:    ".Calculator",
+            AutomationName: "UiAutomator2",
+        }
+        
+        // Create session
+        err := client.CreateSession(ctx, caps)
+        t.AssertNoError(err, "Should create Appium session successfully")
+        defer func() {
+            if err := client.DeleteSession(ctx); err != nil {
+                log.Printf("Failed to delete session: %v", err)
+            }
+        }()
+        
+        // Perform test actions
+        element, err := client.FindElement(ctx, gowright.ByID, "com.android.calculator2:id/digit_1")
+        t.AssertNoError(err, "Should find digit 1 button")
+        
+        err = element.Click(ctx)
+        t.AssertNoError(err, "Should click digit 1 button")
+        
+        // Add more test assertions...
+        fmt.Println("✅ Appium-GoWright integration test completed")
+    })
+    
+    // Run the test suite
+    results := suite.Run()
+    fmt.Printf("✅ Test Results: %d passed, %d failed\n", results.PassedCount, results.FailedCount)
+}
+
+func generateMobileTestingReport() {
+    testResults := &gowright.TestResults{
+        SuiteName:    "Mobile Testing Comprehensive Suite",
+        StartTime:    time.Now().Add(-15 * time.Minute),
+        EndTime:      time.Now(),
+        TotalTests:   4,
+        PassedTests:  4,
+        FailedTests:  0,
+        SkippedTests: 0,
+        ErrorTests:   0,
+        TestCases:    []gowright.TestCaseResult{}, // Would contain actual results
+    }
+    
+    reportConfig := &gowright.ReportConfig{
+        LocalReports: gowright.LocalReportConfig{
+            JSON:      true,
+            HTML:      true,
+            OutputDir: "./reports/mobile-comprehensive",
+        },
+    }
+    
+    reportManager := gowright.NewReportManager(reportConfig)
+    if err := reportManager.GenerateReports(testResults); err != nil {
+        log.Printf("Failed to generate reports: %v", err)
+    } else {
+        fmt.Printf("✅ Reports generated in: %s\n", reportConfig.LocalReports.OutputDir)
+    }
+}
+```
+
+### Key Features Demonstrated
+
+This comprehensive example showcases:
+
+1. **Android Native App Testing**: Complete calculator app automation with element interactions, assertions, and screenshot capture
+2. **iOS Native App Testing**: Cross-platform testing using iOS-specific locators and device management
+3. **Mobile Web Testing**: Browser automation on mobile devices with web content interaction
+4. **Framework Integration**: Seamless integration with GoWright's test suite and assertion framework
+5. **Advanced Features**: Touch gestures, device orientation, screenshot capture, and comprehensive reporting
+6. **Error Handling**: Robust error handling and session management
+7. **Platform-Specific Locators**: Demonstrates both Android and iOS locator strategies
+8. **Reporting**: Comprehensive test reporting with multiple output formats
+
+### Running the Comprehensive Example
+
+To run this comprehensive mobile testing example:
+
+1. **Prerequisites**:
+   - Appium Server running on `http://localhost:4723`
+   - Android emulator or device connected
+   - iOS Simulator (for iOS testing)
+   - Calculator apps available on devices
+
+2. **Execution**:
+   ```bash
+   go run examples/mobile-testing/mobile_comprehensive.go
+   ```
+
+3. **Expected Output**:
+   - Session creation confirmations
+   - Test execution progress
+   - Screenshot capture confirmations
+   - Test results and reporting
+
+This example provides a complete foundation for building comprehensive mobile testing suites using the GoWright framework with Appium integration.

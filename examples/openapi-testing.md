@@ -1,15 +1,581 @@
-# OpenAPI Testing Examples
+# OpenAPI Testing Examples (1/3 - 33% Complete)
 
-This document provides comprehensive examples of OpenAPI specification testing using the GoWright framework's OpenAPI module. These examples demonstrate real-world scenarios for specification validation, breaking changes detection, and circular reference detection.
+This document provides comprehensive examples of OpenAPI specification testing using the Gowright framework's OpenAPI module. These examples demonstrate real-world scenarios for specification validation, request/response validation, parameter validation, security validation, and comprehensive API testing.
+
+## 📁 OpenAPI Testing Examples Structure
+
+The OpenAPI testing examples are organized in the `examples/openapi-testing/` directory:
+
+### 📋 Core OpenAPI Testing Examples
+
+#### 1. **OpenAPI Specification Validation** (`openapi-testing/openapi_validation.go`) ✅ **NEW**
+Comprehensive OpenAPI specification validation and testing.
+
+**Key Concepts:**
+- Specification loading and parsing
+- Schema validation for requests and responses
+- Parameter validation (path, query, header)
+- Response validation against specifications
+- Security scheme validation
+- Data type and format validation
+- Required field validation
+- Path and operation validation
+
+**Example Usage:**
+```bash
+go run examples/openapi-testing/openapi_validation.go
+```
+
+**Features Demonstrated:**
+- Real API testing with specification validation
+- Comprehensive error handling and reporting
+- Integration with live APIs (Petstore example)
+- Multiple validation types in a single test suite
 
 ## Table of Contents
 
-1. [Basic OpenAPI Validation](#basic-openapi-validation)
-2. [Breaking Changes Detection](#breaking-changes-detection)
-3. [Circular Reference Detection](#circular-reference-detection)
-4. [Test Builder Pattern](#test-builder-pattern)
-5. [Integration with GoWright Framework](#integration-with-gowright-framework)
-6. [Comprehensive Testing Example](#comprehensive-testing-example)
+1. [Complete OpenAPI Validation Example](#complete-openapi-validation-example)
+2. [Basic OpenAPI Validation](#basic-openapi-validation)
+3. [Schema and Request Validation](#schema-and-request-validation)
+4. [Parameter and Response Validation](#parameter-and-response-validation)
+5. [Security and Path Validation](#security-and-path-validation)
+6. [Data Type and Required Field Validation](#data-type-and-required-field-validation)
+7. [Integration with Gowright Framework](#integration-with-gowright-framework)
+8. [Breaking Changes Detection](#breaking-changes-detection)
+9. [Circular Reference Detection](#circular-reference-detection)
+10. [Test Builder Pattern](#test-builder-pattern)
+
+## Complete OpenAPI Validation Example
+
+The following example demonstrates a comprehensive OpenAPI validation test suite that covers all aspects of OpenAPI specification testing:
+
+```go
+package main
+
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/gowright/framework/pkg/gowright"
+	"github.com/gowright/framework/pkg/api"
+	"github.com/gowright/framework/pkg/openapi"
+	"github.com/gowright/framework/pkg/reporting"
+)
+
+// OpenAPIValidationTestSuite demonstrates comprehensive OpenAPI specification validation
+type OpenAPIValidationTestSuite struct {
+	framework    *gowright.Framework
+	apiTester    *api.APITester
+	openAPITester *openapi.OpenAPITester
+	reporter     *reporting.Reporter
+}
+
+func main() {
+	fmt.Println("🚀 Starting Gowright OpenAPI Validation Testing Example")
+	fmt.Println("======================================================")
+
+	suite := &OpenAPIValidationTestSuite{}
+	if err := suite.Initialize(); err != nil {
+		log.Fatalf("Failed to initialize test suite: %v", err)
+	}
+	defer suite.Cleanup()
+
+	// Run comprehensive OpenAPI validation tests
+	suite.RunOpenAPIValidationTests()
+
+	fmt.Println("\n✅ OpenAPI validation testing completed successfully!")
+	fmt.Println("📊 Check the generated reports for detailed results")
+}
+
+func (s *OpenAPIValidationTestSuite) Initialize() error {
+	fmt.Println("\n🔧 Initializing OpenAPI Validation Test Suite...")
+
+	// Initialize framework with comprehensive configuration
+	config := gowright.Config{
+		ProjectName: "OpenAPI Validation Testing Demo",
+		Environment: "development",
+		API: gowright.APIConfig{
+			BaseURL: "https://petstore.swagger.io/v2",
+			Timeout: 30 * time.Second,
+			Headers: map[string]string{
+				"User-Agent": "Gowright-OpenAPI-Tester/1.0",
+			},
+		},
+		OpenAPI: gowright.OpenAPIConfig{
+			SpecURL:        "https://petstore.swagger.io/v2/swagger.json",
+			ValidateSchema: true,
+			ValidateParams: true,
+			ValidateResponse: true,
+		},
+		Reporting: gowright.ReportingConfig{
+			Enabled:   true,
+			OutputDir: "reports/openapi-validation-tests",
+			Formats:   []string{"html", "json"},
+		},
+	}
+
+	var err error
+	s.framework, err = gowright.New(config)
+	if err != nil {
+		return fmt.Errorf("failed to create framework: %w", err)
+	}
+
+	// Initialize API tester
+	s.apiTester, err = s.framework.API()
+	if err != nil {
+		return fmt.Errorf("failed to initialize API tester: %w", err)
+	}
+
+	// Initialize OpenAPI tester
+	s.openAPITester, err = s.framework.OpenAPI()
+	if err != nil {
+		return fmt.Errorf("failed to initialize OpenAPI tester: %w", err)
+	}
+
+	// Initialize reporter
+	s.reporter = s.framework.Reporter()
+
+	fmt.Println("✅ Test suite initialized successfully")
+	return nil
+}
+
+func (s *OpenAPIValidationTestSuite) RunOpenAPIValidationTests() {
+	fmt.Println("\n📋 Running OpenAPI Validation Tests...")
+
+	// Test 1: Specification loading and parsing
+	s.TestSpecificationLoading()
+
+	// Test 2: Schema validation
+	s.TestSchemaValidation()
+
+	// Test 3: Parameter validation
+	s.TestParameterValidation()
+
+	// Test 4: Response validation
+	s.TestResponseValidation()
+
+	// Test 5: Security scheme validation
+	s.TestSecurityValidation()
+
+	// Test 6: Path and operation validation
+	s.TestPathOperationValidation()
+
+	// Test 7: Data type validation
+	s.TestDataTypeValidation()
+
+	// Test 8: Required field validation
+	s.TestRequiredFieldValidation()
+
+	// Generate final report
+	s.GenerateReport()
+}
+```
+
+This example demonstrates the complete OpenAPI validation workflow including:
+
+- **Framework Integration**: Seamless integration with the Gowright testing framework
+- **Configuration Management**: Comprehensive configuration for API and OpenAPI testing
+- **Multiple Validation Types**: Schema, parameter, response, security, and data type validation
+- **Real API Testing**: Integration with live APIs (Petstore example)
+- **Comprehensive Reporting**: Detailed HTML and JSON reports
+- **Error Handling**: Robust error handling and cleanup
+
+## Schema and Request Validation
+
+### Schema Validation Example
+
+The OpenAPI module provides comprehensive schema validation for request and response data:
+
+```go
+func (s *OpenAPIValidationTestSuite) TestSchemaValidation() {
+	fmt.Println("\n🔍 Testing Schema Validation...")
+
+	testCase := s.reporter.StartTest("Schema Validation", "Validate request/response schemas against OpenAPI spec")
+
+	// Test valid pet creation
+	validPet := map[string]interface{}{
+		"id":   12345,
+		"name": "Fluffy",
+		"category": map[string]interface{}{
+			"id":   1,
+			"name": "Dogs",
+		},
+		"photoUrls": []string{"https://example.com/photo1.jpg"},
+		"tags": []map[string]interface{}{
+			{
+				"id":   1,
+				"name": "friendly",
+			},
+		},
+		"status": "available",
+	}
+
+	// Validate against schema
+	isValid, errors := s.openAPITester.ValidateRequestSchema("POST", "/pet", validPet)
+	if !isValid {
+		testCase.AddStep(fmt.Sprintf("Valid pet schema validation failed: %v", errors), "warning")
+	} else {
+		testCase.AddStep("Valid pet schema validation passed", "pass")
+	}
+
+	// Test invalid pet (missing required fields)
+	invalidPet := map[string]interface{}{
+		"id": 12345,
+		// Missing required "name" and "photoUrls"
+		"status": "available",
+	}
+
+	isValid, errors = s.openAPITester.ValidateRequestSchema("POST", "/pet", invalidPet)
+	if isValid {
+		testCase.AddStep("Invalid pet schema should have failed validation", "warning")
+	} else {
+		testCase.AddStep(fmt.Sprintf("Invalid pet schema correctly rejected: %v", errors), "pass")
+	}
+
+	// Test with wrong data types
+	wrongTypePet := map[string]interface{}{
+		"id":        "not-a-number", // Should be integer
+		"name":      "Fluffy",
+		"photoUrls": "not-an-array", // Should be array
+		"status":    "available",
+	}
+
+	isValid, errors = s.openAPITester.ValidateRequestSchema("POST", "/pet", wrongTypePet)
+	if isValid {
+		testCase.AddStep("Wrong data type schema should have failed validation", "warning")
+	} else {
+		testCase.AddStep("Wrong data type schema correctly rejected", "pass")
+	}
+
+	testCase.Pass("Schema validation tests completed")
+	fmt.Println("✅ Schema validation test passed")
+}
+```
+
+### Key Schema Validation Features
+
+- **Request Schema Validation**: Validates request bodies against OpenAPI schema definitions
+- **Data Type Checking**: Ensures correct data types (integer, string, array, object)
+- **Required Field Validation**: Checks for missing required fields
+- **Format Validation**: Validates string formats (email, date, UUID, etc.)
+- **Nested Object Support**: Handles complex nested object structures
+- **Array Validation**: Validates array items and structure
+
+## Parameter and Response Validation
+
+### Parameter Validation Example
+
+```go
+func (s *OpenAPIValidationTestSuite) TestParameterValidation() {
+	fmt.Println("\n🔧 Testing Parameter Validation...")
+
+	testCase := s.reporter.StartTest("Parameter Validation", "Validate API parameters against OpenAPI spec")
+
+	// Test valid path parameter
+	petID := "12345"
+	isValid, errors := s.openAPITester.ValidatePathParameter("GET", "/pet/{petId}", "petId", petID)
+	if !isValid {
+		testCase.AddStep(fmt.Sprintf("Valid path parameter validation failed: %v", errors), "warning")
+	} else {
+		testCase.AddStep("Valid path parameter validation passed", "pass")
+	}
+
+	// Test invalid path parameter (non-numeric for integer parameter)
+	invalidPetID := "not-a-number"
+	isValid, errors = s.openAPITester.ValidatePathParameter("GET", "/pet/{petId}", "petId", invalidPetID)
+	if isValid {
+		testCase.AddStep("Invalid path parameter should have failed validation", "warning")
+	} else {
+		testCase.AddStep("Invalid path parameter correctly rejected", "pass")
+	}
+
+	// Test query parameters
+	queryParams := map[string]string{
+		"status": "available",
+	}
+	isValid, errors = s.openAPITester.ValidateQueryParameters("GET", "/pet/findByStatus", queryParams)
+	if !isValid {
+		testCase.AddStep(fmt.Sprintf("Valid query parameter validation failed: %v", errors), "warning")
+	} else {
+		testCase.AddStep("Valid query parameter validation passed", "pass")
+	}
+
+	// Test invalid query parameter value
+	invalidQueryParams := map[string]string{
+		"status": "invalid-status", // Should be one of: available, pending, sold
+	}
+	isValid, errors = s.openAPITester.ValidateQueryParameters("GET", "/pet/findByStatus", invalidQueryParams)
+	if isValid {
+		testCase.AddStep("Invalid query parameter should have failed validation", "warning")
+	} else {
+		testCase.AddStep("Invalid query parameter correctly rejected", "pass")
+	}
+
+	testCase.Pass("Parameter validation tests completed")
+	fmt.Println("✅ Parameter validation test passed")
+}
+```
+
+### Response Validation Example
+
+```go
+func (s *OpenAPIValidationTestSuite) TestResponseValidation() {
+	fmt.Println("\n📤 Testing Response Validation...")
+
+	testCase := s.reporter.StartTest("Response Validation", "Validate API responses against OpenAPI spec")
+
+	// Make actual API call and validate response
+	resp, err := s.apiTester.GET("/pet/findByStatus?status=available")
+	if err != nil {
+		testCase.Fail("API call failed", err.Error())
+		return
+	}
+
+	// Validate response status code
+	expectedStatusCodes := []int{200}
+	isValidStatus := s.openAPITester.ValidateResponseStatus("GET", "/pet/findByStatus", resp.StatusCode, expectedStatusCodes)
+	if !isValidStatus {
+		testCase.AddStep(fmt.Sprintf("Unexpected status code: %d", resp.StatusCode), "warning")
+	} else {
+		testCase.AddStep(fmt.Sprintf("Valid status code: %d", resp.StatusCode), "pass")
+	}
+
+	// Validate response headers
+	expectedHeaders := map[string]string{
+		"Content-Type": "application/json",
+	}
+	isValidHeaders := s.openAPITester.ValidateResponseHeaders("GET", "/pet/findByStatus", resp.Headers, expectedHeaders)
+	if !isValidHeaders {
+		testCase.AddStep("Response headers validation failed", "warning")
+	} else {
+		testCase.AddStep("Response headers validation passed", "pass")
+	}
+
+	// Validate response schema
+	var responseBody interface{}
+	if err := resp.JSON(&responseBody); err != nil {
+		testCase.AddStep("Failed to parse response JSON", "warning")
+	} else {
+		isValidSchema, schemaErrors := s.openAPITester.ValidateResponseSchema("GET", "/pet/findByStatus", resp.StatusCode, responseBody)
+		if !isValidSchema {
+			testCase.AddStep(fmt.Sprintf("Response schema validation failed: %v", schemaErrors), "warning")
+		} else {
+			testCase.AddStep("Response schema validation passed", "pass")
+		}
+	}
+
+	testCase.Pass("Response validation tests completed")
+	fmt.Println("✅ Response validation test passed")
+}
+```
+
+## Security and Path Validation
+
+### Security Validation Example
+
+```go
+func (s *OpenAPIValidationTestSuite) TestSecurityValidation() {
+	fmt.Println("\n🔒 Testing Security Validation...")
+
+	testCase := s.reporter.StartTest("Security Validation", "Validate API security schemes against OpenAPI spec")
+
+	// Check if security schemes are defined
+	spec, err := s.openAPITester.LoadSpecification()
+	if err != nil {
+		testCase.Fail("Failed to load specification for security validation", err.Error())
+		return
+	}
+
+	if spec.SecurityDefinitions == nil && spec.Components.SecuritySchemes == nil {
+		testCase.AddStep("No security schemes defined in specification", "warning")
+	} else {
+		testCase.AddStep("Security schemes found in specification", "pass")
+		
+		// List security schemes
+		if spec.SecurityDefinitions != nil {
+			for name, scheme := range spec.SecurityDefinitions {
+				testCase.AddStep(fmt.Sprintf("Security scheme: %s (type: %s)", name, scheme.Type), "info")
+			}
+		}
+		
+		if spec.Components.SecuritySchemes != nil {
+			for name, scheme := range spec.Components.SecuritySchemes {
+				testCase.AddStep(fmt.Sprintf("Security scheme: %s (type: %s)", name, scheme.Type), "info")
+			}
+		}
+	}
+
+	// Test API key authentication
+	s.apiTester.SetHeader("api_key", "test-api-key")
+	resp, err := s.apiTester.GET("/pet/findByStatus?status=available")
+	if err == nil {
+		testCase.AddStep(fmt.Sprintf("API call with API key: status %d", resp.StatusCode), "info")
+	}
+
+	// Validate security requirements for specific operations
+	securityRequired := s.openAPITester.IsSecurityRequired("POST", "/pet")
+	if securityRequired {
+		testCase.AddStep("POST /pet requires authentication", "info")
+	} else {
+		testCase.AddStep("POST /pet does not require authentication", "info")
+	}
+
+	testCase.Pass("Security validation tests completed")
+	fmt.Println("✅ Security validation test passed")
+}
+```
+
+### Path and Operation Validation Example
+
+```go
+func (s *OpenAPIValidationTestSuite) TestPathOperationValidation() {
+	fmt.Println("\n🛣️ Testing Path and Operation Validation...")
+
+	testCase := s.reporter.StartTest("Path Operation Validation", "Validate API paths and operations against OpenAPI spec")
+
+	// Test valid paths and operations
+	validEndpoints := []struct {
+		method string
+		path   string
+	}{
+		{"GET", "/pet/findByStatus"},
+		{"GET", "/pet/findByTags"},
+		{"GET", "/pet/{petId}"},
+		{"POST", "/pet"},
+		{"PUT", "/pet"},
+		{"DELETE", "/pet/{petId}"},
+	}
+
+	for _, endpoint := range validEndpoints {
+		exists := s.openAPITester.PathOperationExists(endpoint.method, endpoint.path)
+		if exists {
+			testCase.AddStep(fmt.Sprintf("%s %s: operation exists", endpoint.method, endpoint.path), "pass")
+		} else {
+			testCase.AddStep(fmt.Sprintf("%s %s: operation not found in spec", endpoint.method, endpoint.path), "warning")
+		}
+	}
+
+	// Validate operation metadata
+	operation := s.openAPITester.GetOperation("GET", "/pet/findByStatus")
+	if operation != nil {
+		testCase.AddStep(fmt.Sprintf("Operation summary: %s", operation.Summary), "info")
+		testCase.AddStep(fmt.Sprintf("Operation description: %s", operation.Description), "info")
+		
+		if len(operation.Tags) > 0 {
+			testCase.AddStep(fmt.Sprintf("Operation tags: %v", operation.Tags), "info")
+		}
+	}
+
+	testCase.Pass("Path and operation validation tests completed")
+	fmt.Println("✅ Path and operation validation test passed")
+}
+```
+
+## Data Type and Required Field Validation
+
+### Data Type Validation Example
+
+```go
+func (s *OpenAPIValidationTestSuite) TestDataTypeValidation() {
+	fmt.Println("\n🔢 Testing Data Type Validation...")
+
+	testCase := s.reporter.StartTest("Data Type Validation", "Validate data types against OpenAPI spec")
+
+	// Test integer validation
+	testCases := []struct {
+		name     string
+		value    interface{}
+		expected string
+		valid    bool
+	}{
+		{"Valid integer", 12345, "integer", true},
+		{"Invalid integer (string)", "12345", "integer", false},
+		{"Valid string", "test", "string", true},
+		{"Invalid string (number)", 123, "string", false},
+		{"Valid boolean", true, "boolean", true},
+		{"Invalid boolean (string)", "true", "boolean", false},
+		{"Valid array", []string{"a", "b"}, "array", true},
+		{"Invalid array (string)", "not-array", "array", false},
+	}
+
+	for _, tc := range testCases {
+		isValid := s.openAPITester.ValidateDataType(tc.value, tc.expected)
+		if isValid == tc.valid {
+			testCase.AddStep(fmt.Sprintf("%s: validation correct", tc.name), "pass")
+		} else {
+			testCase.AddStep(fmt.Sprintf("%s: validation incorrect (expected %v, got %v)", tc.name, tc.valid, isValid), "warning")
+		}
+	}
+
+	// Test format validation
+	formatTests := []struct {
+		name   string
+		value  string
+		format string
+		valid  bool
+	}{
+		{"Valid email", "test@example.com", "email", true},
+		{"Invalid email", "not-an-email", "email", false},
+		{"Valid date", "2023-12-25", "date", true},
+		{"Invalid date", "not-a-date", "date", false},
+		{"Valid UUID", "123e4567-e89b-12d3-a456-426614174000", "uuid", true},
+		{"Invalid UUID", "not-a-uuid", "uuid", false},
+	}
+
+	for _, tc := range formatTests {
+		isValid := s.openAPITester.ValidateFormat(tc.value, tc.format)
+		if isValid == tc.valid {
+			testCase.AddStep(fmt.Sprintf("%s: format validation correct", tc.name), "pass")
+		} else {
+			testCase.AddStep(fmt.Sprintf("%s: format validation incorrect", tc.name), "warning")
+		}
+	}
+
+	testCase.Pass("Data type validation tests completed")
+	fmt.Println("✅ Data type validation test passed")
+}
+```
+
+### Required Field Validation Example
+
+```go
+func (s *OpenAPIValidationTestSuite) TestRequiredFieldValidation() {
+	fmt.Println("\n✅ Testing Required Field Validation...")
+
+	testCase := s.reporter.StartTest("Required Field Validation", "Validate required fields against OpenAPI spec")
+
+	// Test pet creation with all required fields
+	completePet := map[string]interface{}{
+		"name":      "Fluffy",
+		"photoUrls": []string{"https://example.com/photo.jpg"},
+		"status":    "available",
+	}
+
+	isValid, errors := s.openAPITester.ValidateRequiredFields("POST", "/pet", completePet)
+	if isValid {
+		testCase.AddStep("Complete pet with all required fields: validation passed", "pass")
+	} else {
+		testCase.AddStep(fmt.Sprintf("Complete pet validation failed: %v", errors), "warning")
+	}
+
+	// Test pet creation missing required fields
+	incompletePet := map[string]interface{}{
+		"name": "Fluffy",
+		// Missing required "photoUrls"
+	}
+
+	isValid, errors = s.openAPITester.ValidateRequiredFields("POST", "/pet", incompletePet)
+	if !isValid {
+		testCase.AddStep(fmt.Sprintf("Incomplete pet correctly rejected: %v", errors), "pass")
+	} else {
+		testCase.AddStep("Incomplete pet should have failed validation", "warning")
+	}
+
+	testCase.Pass("Required field validation tests completed")
+	fmt.Println("✅ Required field validation test passed")
+}
+```
 
 ## Basic OpenAPI Validation
 

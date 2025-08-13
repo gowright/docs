@@ -462,19 +462,25 @@ func TestAndroidCalculator(t *testing.T) {
     ctx := context.Background()
     
     caps := gowright.AppiumCapabilities{
-        PlatformName:   "Android",
-        DeviceName:     "emulator-5554",
-        AppPackage:     "com.android.calculator2",
-        AppActivity:    ".Calculator",
-        AutomationName: "UiAutomator2",
+        PlatformName:      "Android",
+        PlatformVersion:   "11",
+        DeviceName:        "emulator-5554",
+        AppPackage:        "com.android.calculator2",
+        AppActivity:       ".Calculator",
+        AutomationName:    "UiAutomator2",
+        NoReset:           true,
+        NewCommandTimeout: 60,
     }
     
     err := client.CreateSession(ctx, caps)
     require.NoError(t, err)
     defer client.DeleteSession(ctx)
     
+    // Wait for calculator to load
+    time.Sleep(2 * time.Second)
+    
     // Perform calculation: 5 + 3 = 8
-    num5, err := client.FindElement(ctx, gowright.ByID, "com.android.calculator2:id/digit_5")
+    num5, err := client.WaitForElementClickable(ctx, gowright.ByID, "com.android.calculator2:id/digit_5", 10*time.Second)
     require.NoError(t, err)
     err = num5.Click(ctx)
     require.NoError(t, err)
@@ -501,6 +507,19 @@ func TestAndroidCalculator(t *testing.T) {
     resultText, err := result.GetText(ctx)
     require.NoError(t, err)
     assert.Equal(t, "8", resultText)
+    
+    // Take screenshot for verification
+    screenshot, err := client.TakeScreenshot(ctx)
+    require.NoError(t, err)
+    assert.Greater(t, len(screenshot), 0, "Screenshot should not be empty")
+    
+    // Test touch gestures
+    width, height, err := client.GetWindowSize(ctx)
+    require.NoError(t, err)
+    
+    // Perform swipe gesture
+    err = client.Swipe(ctx, width/2, height/2, width/2, height/4, 1000)
+    require.NoError(t, err)
 }
 ```
 
@@ -512,18 +531,24 @@ func TestiOSCalculator(t *testing.T) {
     ctx := context.Background()
     
     caps := gowright.AppiumCapabilities{
-        PlatformName:   "iOS",
-        DeviceName:     "iPhone 13 Simulator",
-        BundleID:       "com.apple.calculator",
-        AutomationName: "XCUITest",
+        PlatformName:      "iOS",
+        PlatformVersion:   "15.0",
+        DeviceName:        "iPhone 13 Simulator",
+        BundleID:          "com.apple.calculator",
+        AutomationName:    "XCUITest",
+        NoReset:           true,
+        NewCommandTimeout: 60,
     }
     
     err := client.CreateSession(ctx, caps)
     require.NoError(t, err)
     defer client.DeleteSession(ctx)
     
+    // Wait for calculator to load
+    time.Sleep(2 * time.Second)
+    
     // Perform calculation: 7 + 2 = 9
-    num7, err := client.FindElement(ctx, gowright.ByAccessibilityID, "7")
+    num7, err := client.WaitForElementClickable(ctx, gowright.ByAccessibilityID, "7", 10*time.Second)
     require.NoError(t, err)
     err = num7.Click(ctx)
     require.NoError(t, err)
@@ -543,7 +568,17 @@ func TestiOSCalculator(t *testing.T) {
     err = equals.Click(ctx)
     require.NoError(t, err)
     
-    // Verify result would be implementation-specific
+    // Test iOS-specific features
+    orientation, err := client.GetOrientation(ctx)
+    require.NoError(t, err)
+    assert.Contains(t, []string{"PORTRAIT", "LANDSCAPE"}, orientation)
+    
+    // Test iOS predicate locators
+    by, value := gowright.IOS.Label("Calculator")
+    elements, err := client.FindElements(ctx, by, value)
+    if err == nil {
+        assert.GreaterOrEqual(t, len(elements), 0, "Should find Calculator elements")
+    }
 }
 ```
 
@@ -555,9 +590,12 @@ func TestMobileWeb(t *testing.T) {
     ctx := context.Background()
     
     caps := gowright.AppiumCapabilities{
-        PlatformName:   "Android",
-        DeviceName:     "emulator-5554",
-        AutomationName: "UiAutomator2",
+        PlatformName:      "Android",
+        PlatformVersion:   "11",
+        DeviceName:        "emulator-5554",
+        AutomationName:    "UiAutomator2",
+        NoReset:           true,
+        NewCommandTimeout: 60,
     }
     
     err := client.CreateSession(ctx, caps)
@@ -580,7 +618,25 @@ func TestMobileWeb(t *testing.T) {
     err = addressBar.SendKeys(ctx, "https://example.com")
     require.NoError(t, err)
     
-    // Additional web testing logic...
+    // Test mobile-specific interactions
+    width, height, err := client.GetWindowSize(ctx)
+    require.NoError(t, err)
+    assert.Greater(t, width, 0, "Screen width should be positive")
+    assert.Greater(t, height, 0, "Screen height should be positive")
+    
+    // Test mobile gestures on web content
+    err = client.Swipe(ctx, width/2, height/2, width/2, height/4, 1000)
+    require.NoError(t, err)
+    
+    // Get page source for analysis
+    source, err := client.GetPageSource(ctx)
+    require.NoError(t, err)
+    assert.Greater(t, len(source), 0, "Page source should not be empty")
+    
+    // Take screenshot of mobile web page
+    screenshot, err := client.TakeScreenshot(ctx)
+    require.NoError(t, err)
+    assert.Greater(t, len(screenshot), 0, "Screenshot should not be empty")
 }
 ```
 

@@ -2,14 +2,104 @@
 
 This document provides fundamental examples of using the Gowright testing framework. These examples demonstrate the core concepts and basic setup patterns that form the foundation for more advanced testing scenarios.
 
+> **Note**: The examples repository has been restructured with comprehensive categorized examples. See the [Examples Repository Structure](#examples-repository-structure) section for the complete organization.
+
 ## Table of Contents
 
-1. [Framework Initialization](#framework-initialization)
-2. [Configuration Examples](#configuration-examples)
-3. [Basic Test Patterns](#basic-test-patterns)
-4. [Resource Management](#resource-management)
-5. [Error Handling](#error-handling)
-6. [Logging and Debugging](#logging-and-debugging)
+1. [Examples Repository Structure](#examples-repository-structure)
+2. [Framework Initialization](#framework-initialization)
+3. [Configuration Examples](#configuration-examples)
+4. [Basic Test Patterns](#basic-test-patterns)
+5. [Resource Management](#resource-management)
+6. [Error Handling](#error-handling)
+7. [Logging and Debugging](#logging-and-debugging)
+8. [Learning Path](#learning-path)
+
+## Examples Repository Structure
+
+The examples repository is now organized into comprehensive categories with multiple examples per testing type:
+
+### 🚀 Getting Started Examples
+- **basic_usage.go** - Framework initialization and configuration
+- **configuration_examples.go** - Advanced configuration patterns
+- **first_test.go** - Your first Gowright test
+
+### 🌐 UI Testing Examples (5 examples)
+- **ui_basic.go** - Basic browser automation
+- **ui_forms.go** - Form interactions and validation
+- **ui_navigation.go** - Advanced page navigation and routing (7 test scenarios)
+- **ui_dynamic_content.go** - AJAX and dynamic content
+- **ui_file_uploads.go** - Comprehensive file upload testing (6 test scenarios)
+
+### 🔌 API Testing Examples (8 examples)
+- **api_basic.go** - Basic REST API testing
+- **api_authentication.go** - Authentication patterns
+- **api_crud_operations.go** - Complete CRUD testing
+- **api_error_handling.go** - Error scenarios
+- **api_performance.go** - Load and performance testing
+- **api_graphql.go** - GraphQL API testing
+- **api_websockets.go** - WebSocket testing
+- **api_rate_limiting.go** - Rate limiting tests
+
+### 🗄️ Database Testing Examples (7 examples)
+- **database_basic.go** - Basic database operations
+- **database_transactions.go** - Transaction management
+- **database_migrations.go** - Schema migrations
+- **database_performance.go** - Performance testing
+- **database_multi_db.go** - Multi-database scenarios
+- **database_constraints.go** - Constraint testing
+- **database_stored_procedures.go** - Stored procedures
+
+### 📱 Mobile Testing Examples (5 examples)
+- **mobile_android.go** - Android app testing
+- **mobile_ios.go** - iOS app testing
+- **mobile_gestures.go** - Touch gestures
+- **mobile_hybrid.go** - Hybrid app testing
+- **mobile_performance.go** - Mobile performance
+
+### 🔗 Integration Testing Examples (4 examples)
+- **integration_basic.go** - Basic integration patterns
+- **integration_ecommerce.go** - E-commerce workflow
+- **integration_microservices.go** - Microservices testing
+- **integration_event_driven.go** - Event-driven architecture
+
+### 📋 OpenAPI Testing Examples (3 examples)
+- **openapi_validation.go** - Specification validation
+- **openapi_contract_testing.go** - Contract testing
+- **openapi_breaking_changes.go** - Breaking change detection
+
+### 📊 Reporting Examples (3 examples)
+- **reporting_basic.go** - Basic reporting
+- **reporting_custom.go** - Custom report formats
+- **reporting_dashboard.go** - Dashboard integration
+
+### 🏗️ Advanced Patterns (5 examples)
+- **patterns_page_object.go** - Page Object Model
+- **patterns_data_driven.go** - Data-driven testing
+- **patterns_parallel.go** - Parallel execution
+- **patterns_fixtures.go** - Test fixtures
+- **patterns_mocking.go** - Mocking and stubbing
+
+### 🔧 CI/CD Examples (3 examples)
+- **cicd_github_actions.go** - GitHub Actions integration
+- **cicd_jenkins.go** - Jenkins integration
+- **cicd_docker.go** - Docker-based testing
+
+### Running Examples
+
+```bash
+# Run individual examples by category
+go run examples/getting-started/basic_usage.go
+go run examples/ui-testing/ui_basic.go
+go run examples/api-testing/api_basic.go
+
+# Run all examples in a category
+./examples/run_category.sh ui-testing
+./examples/run_category.sh api-testing
+
+# Run all examples
+./examples/run_all_examples.sh
+```
 
 ## Framework Initialization
 
@@ -790,24 +880,51 @@ func TestWithStructuredLogging(t *testing.T) {
 }
 ```
 
+## Learning Path
+
+The restructured examples repository provides a clear learning progression:
+
+### Beginner Path
+1. **Getting Started**: Start with `getting-started/basic_usage.go`
+2. **UI Basics**: Try `ui-testing/ui_basic.go`
+3. **API Basics**: Explore `api-testing/api_basic.go`
+4. **Database Basics**: Learn `database-testing/database_basic.go`
+
+### Intermediate Path
+1. **Integration Testing**: Practice `integration-testing/integration_basic.go`
+2. **Advanced Patterns**: Study `advanced-patterns/patterns_page_object.go`
+3. **Mobile Testing**: Try `mobile-testing/mobile_android.go`
+4. **OpenAPI Testing**: Explore `openapi-testing/openapi_validation.go`
+
+### Advanced Path
+1. **Parallel Execution**: Master `advanced-patterns/patterns_parallel.go`
+2. **CI/CD Integration**: Implement `cicd/cicd_github_actions.go`
+3. **Custom Reporting**: Create `reporting/reporting_custom.go`
+4. **Performance Testing**: Optimize with performance examples
+
 ## Next Steps
 
-After mastering these basic usage patterns, you can explore:
+After mastering these basic usage patterns, explore the comprehensive example categories:
 
-- [API Testing Examples](api-testing.md) - REST API testing with validation
-- [UI Testing Examples](ui-testing.md) - Browser automation examples
-- [Mobile Testing Examples](mobile-testing.md) - Mobile app automation
-- [Database Testing Examples](database-testing.md) - Database operations
-- [Integration Testing Examples](integration-testing.md) - End-to-end workflows
-- [OpenAPI Testing Examples](openapi-testing.md) - OpenAPI specification testing
+### Core Testing Types
+- [API Testing Examples](api-testing.md) - 8 comprehensive REST API testing scenarios
+- [UI Testing Examples](ui-testing.md) - 5 browser automation examples
+- [Mobile Testing Examples](mobile-testing.md) - 5 mobile app automation examples
+- [Database Testing Examples](database-testing.md) - 7 database operation examples
+- [Integration Testing Examples](integration-testing.md) - 4 end-to-end workflow examples
+- [OpenAPI Testing Examples](openapi-testing.md) - 3 OpenAPI specification testing examples
 
-For more advanced topics, see:
-
+### Advanced Topics
 - [Architecture Overview](../advanced/architecture.md) - Framework architecture
 - [Test Suites](../advanced/test-suites.md) - Advanced test organization
 - [Parallel Execution](../advanced/parallel-execution.md) - Concurrent testing
 - [Resource Management](../advanced/resource-management.md) - Performance optimization
 
+### Specialized Examples
+- **Reporting Examples**: 3 examples for custom reporting and dashboard integration
+- **Advanced Patterns**: 5 examples covering Page Object Model, data-driven testing, and mocking
+- **CI/CD Examples**: 3 examples for GitHub Actions, Jenkins, and Docker integration
+
 ---
 
-These examples provide a solid foundation for using the Gowright testing framework. The framework's modular design allows you to start simple and gradually add more sophisticated testing capabilities as your needs grow.
+The restructured examples repository provides over 50 comprehensive examples across 10 categories, offering a complete learning path from basic framework usage to advanced enterprise patterns. Each category includes multiple real-world scenarios to help you master the Gowright testing framework.

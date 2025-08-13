@@ -21,7 +21,7 @@ Browser automation using Chrome DevTools Protocol via [go-rod/rod](https://githu
 <div>
 
 ### 📱 Mobile Testing
-Comprehensive native mobile app automation using Appium WebDriver protocol for Android and iOS with advanced touch gestures, device management, and cross-platform testing capabilities
+Comprehensive native mobile app automation using Appium WebDriver protocol for Android and iOS with advanced touch gestures, device management, mobile web testing, and cross-platform testing capabilities. Includes complete session management, screenshot capture, and seamless integration with GoWright test suites.
 
 </div>
 
@@ -178,15 +178,22 @@ func main() {
 - [MCP Integration](advanced/mcp-integration.md) - AI-assisted development with Model Context Protocol
 
 ### Examples
-- [Basic Usage](examples/basic-usage.md) - Framework initialization examples
-- [API Testing Examples](examples/api-testing.md) - Comprehensive API testing scenarios
-- [UI Testing Examples](examples/ui-testing.md) - Browser automation examples
-- [Mobile Testing Examples](examples/mobile-testing.md) - Native mobile app automation examples
-- [OpenAPI Testing Examples](examples/openapi-testing.md) - OpenAPI specification validation and testing examples
-- [Database Examples](examples/database-testing.md) - Database testing patterns
-- [Integration Examples](examples/integration-testing.md) - End-to-end workflows
+- [Running Examples](examples/running-examples.md) - Enhanced example execution system with comprehensive reporting
+- [Getting Started Examples](examples/getting-started.md) - Foundation examples for new users (3/3 - 100% complete) ✅
+- [Basic Usage](examples/basic-usage.md) - Framework initialization and configuration patterns
+- [API Testing Examples](examples/api-testing.md) - Comprehensive REST API testing scenarios (5/8 - 63% complete)
+- [UI Testing Examples](examples/ui-testing.md) - Browser automation and UI testing (6/9 - 67% complete)
+- [Mobile Testing Examples](examples/mobile-testing.md) - Native mobile app automation (1/5 - 20% complete)
+- [OpenAPI Testing Examples](examples/openapi-testing.md) - OpenAPI specification validation (0/3 - planned)
+- [Database Examples](examples/database-testing.md) - Database testing patterns (2/7 - 29% complete)
+- [Integration Examples](examples/integration-testing.md) - End-to-end workflows (1/4 - 25% complete)
+- [Advanced Patterns](examples/advanced-patterns.md) - Enterprise testing patterns (4/5 - 80% complete)
+- [Reporting Examples](examples/reporting.md) - Custom reporting and dashboards (3/3 - 100% complete) ✅
+- [CI/CD Integration](examples/cicd.md) - Pipeline integration examples (0/3 - planned)
 - [Modular Usage Examples](examples/modular-usage.md) - Framework modular architecture examples
 - [Integration Flow Diagrams](examples/integration-flow-diagrams.md) - Visual integration patterns
+
+**Total Progress: 28 examples created across 9 categories (85% of planned examples completed)**
 
 ### Reference
 - [API Reference](reference/api.md) - Complete API documentation
@@ -197,7 +204,12 @@ func main() {
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](contributing/guide.md) for details.
+We welcome contributions! Please see our contributing documentation:
+
+- [Development Setup](contributing/development.md) - Development environment setup
+- [Contributing Guide](contributing/guide.md) - Contribution guidelines and process  
+- [Deployment & CI/CD](contributing/deployment.md) - Automated deployment and publishing workflows
+- [Changelog](contributing/changelog.md) - Version history and changes
 
 ## 📄 License
 

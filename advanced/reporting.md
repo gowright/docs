@@ -563,6 +563,366 @@ func TestCustomDashboardReporting(t *testing.T) {
 
 ## Custom Reporting
 
+### Custom XML/JUnit Report Generation
+
+```go
+func TestCustomXMLReporting(t *testing.T) {
+    // Define custom XML structures
+    type CustomTestSuite struct {
+        XMLName    xml.Name           `xml:"testsuite"`
+        Name       string             `xml:"name,attr"`
+        Tests      int                `xml:"tests,attr"`
+        Failures   int                `xml:"failures,attr"`
+        Errors     int                `xml:"errors,attr"`
+        Time       string             `xml:"time,attr"`
+        Timestamp  string             `xml:"timestamp,attr"`
+        TestCases  []CustomTestCase   `xml:"testcase"`
+        Properties []CustomProperty   `xml:"properties>property"`
+    }
+    
+    type CustomTestCase struct {
+        XMLName   xml.Name      `xml:"testcase"`
+        Name      string        `xml:"name,attr"`
+        ClassName string        `xml:"classname,attr"`
+        Time      string        `xml:"time,attr"`
+        Failure   *CustomFailure `xml:"failure,omitempty"`
+        Error     *CustomError   `xml:"error,omitempty"`
+        SystemOut string        `xml:"system-out,omitempty"`
+    }
+    
+    // Generate custom XML report
+    customSuite := CustomTestSuite{
+        Name:      testResults.SuiteName,
+        Tests:     testResults.TotalTests,
+        Failures:  testResults.FailedTests,
+        Time:      fmt.Sprintf("%.3f", testResults.EndTime.Sub(testResults.StartTime).Seconds()),
+        Timestamp: testResults.StartTime.Format(time.RFC3339),
+        Properties: []CustomProperty{
+            {Name: "environment", Value: "test"},
+            {Name: "framework", Value: "gowright"},
+            {Name: "version", Value: "1.0.0"},
+        },
+    }
+    
+    // Convert test cases to XML format
+    for _, testCase := range testResults.TestCases {
+        customCase := CustomTestCase{
+            Name:      testCase.Name,
+            ClassName: "gowright.TestSuite",
+            Time:      fmt.Sprintf("%.3f", testCase.Duration.Seconds()),
+            SystemOut: strings.Join(testCase.Logs, "\n"),
+        }
+        
+        if testCase.Status == gowright.TestStatusFailed && testCase.Error != nil {
+            customCase.Failure = &CustomFailure{
+                Message: testCase.Error.Error(),
+                Type:    "AssertionError",
+                Content: testCase.Error.Error(),
+            }
+        }
+        
+        customSuite.TestCases = append(customSuite.TestCases, customCase)
+    }
+    
+    // Write XML file
+    xmlFile := filepath.Join(outputDir, "junit-report.xml")
+    file, err := os.Create(xmlFile)
+    assert.NoError(t, err)
+    defer file.Close()
+    
+    file.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\n")
+    encoder := xml.NewEncoder(file)
+    encoder.Indent("", "  ")
+    err = encoder.Encode(customSuite)
+    assert.NoError(t, err)
+}
+```
+
+### CSV Report Generation
+
+```go
+func TestCSVReporting(t *testing.T) {
+    outputDir := "./test-reports/csv"
+    os.MkdirAll(outputDir, 0755)
+    
+    // Generate test summary CSV
+    summaryFile := filepath.Join(outputDir, "test-summary.csv")
+    file, err := os.Create(summaryFile)
+    assert.NoError(t, err)
+    defer file.Close()
+    
+    // Write CSV header
+    file.WriteString("Test Name,Status,Duration (seconds),Start Time,End Time,Error Message,Screenshot Count,Log Count\n")
+    
+    // Write test case data
+    for _, testCase := range testResults.TestCases {
+        errorMsg := ""
+        if testCase.Error != nil {
+            errorMsg = strings.ReplaceAll(testCase.Error.Error(), ",", ";") // Escape commas
+        }
+        
+        line := fmt.Sprintf("%s,%s,%.3f,%s,%s,%s,%d,%d\n",
+            testCase.Name,
+            testCase.Status.String(),
+            testCase.Duration.Seconds(),
+            testCase.StartTime.Format("2006-01-02 15:04:05"),
+            testCase.EndTime.Format("2006-01-02 15:04:05"),
+            errorMsg,
+            len(testCase.Screenshots),
+            len(testCase.Logs),
+        )
+        file.WriteString(line)
+    }
+    
+    // Generate metrics CSV
+    metricsFile := filepath.Join(outputDir, "test-metrics.csv")
+    metricsFileHandle, err := os.Create(metricsFile)
+    assert.NoError(t, err)
+    defer metricsFileHandle.Close()
+    
+    metricsFileHandle.WriteString("Metric,Value\n")
+    metricsFileHandle.WriteString(fmt.Sprintf("Total Tests,%d\n", testResults.TotalTests))
+    metricsFileHandle.WriteString(fmt.Sprintf("Passed Tests,%d\n", testResults.PassedTests))
+    metricsFileHandle.WriteString(fmt.Sprintf("Failed Tests,%d\n", testResults.FailedTests))
+    metricsFileHandle.WriteString(fmt.Sprintf("Success Rate,%.2f%%\n", 
+        float64(testResults.PassedTests)/float64(testResults.TotalTests)*100))
+}
+```
+
+### Interactive HTML Dashboard Generation
+
+```go
+func TestCustomDashboardGeneration(t *testing.T) {
+    dashboardHTML := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gowright Custom Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .metric-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); text-align: center; }
+        .metric-value { font-size: 2em; font-weight: bold; color: #333; }
+        .metric-label { color: #666; margin-top: 5px; }
+        .test-results { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden; }
+        .test-row { padding: 15px; border-bottom: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
+        .status-passed { color: #28a745; font-weight: bold; }
+        .status-failed { color: #dc3545; font-weight: bold; }
+        .status-skipped { color: #ffc107; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Gowright Test Dashboard</h1>
+        <p>Suite: {{.SuiteName}}</p>
+        <p>Executed: {{.StartTime}}</p>
+    </div>
+    
+    <div class="metrics">
+        <div class="metric-card">
+            <div class="metric-value">{{.TotalTests}}</div>
+            <div class="metric-label">Total Tests</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #28a745;">{{.PassedTests}}</div>
+            <div class="metric-label">Passed</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" style="color: #dc3545;">{{.FailedTests}}</div>
+            <div class="metric-label">Failed</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{.SuccessRate}}%</div>
+            <div class="metric-label">Success Rate</div>
+        </div>
+    </div>
+    
+    <div class="test-results">
+        <div class="test-header">Test Results</div>
+        {{range .TestCases}}
+        <div class="test-row">
+            <div>
+                <strong>{{.Name}}</strong>
+                <div class="duration">Duration: {{.Duration}}</div>
+            </div>
+            <div class="status-{{.Status}}">{{.Status}}</div>
+        </div>
+        {{end}}
+    </div>
+</body>
+</html>`
+    
+    dashboardFile := filepath.Join(outputDir, "dashboard.html")
+    err := os.WriteFile(dashboardFile, []byte(dashboardHTML), 0644)
+    assert.NoError(t, err)
+}
+```
+
+### Team-Specific Report Generation
+
+```go
+func TestTeamSpecificReports(t *testing.T) {
+    // Generate developer-focused report
+    devReport := fmt.Sprintf(`# Developer Test Report
+
+## Summary
+- **Suite**: %s
+- **Total Tests**: %d
+- **Passed**: %d ✅
+- **Failed**: %d ❌
+- **Success Rate**: %.1f%%
+
+## Failed Tests (Requires Attention)
+`, testResults.SuiteName, testResults.TotalTests, testResults.PassedTests, 
+    testResults.FailedTests, float64(testResults.PassedTests)/float64(testResults.TotalTests)*100)
+    
+    for _, testCase := range testResults.TestCases {
+        if testCase.Status == gowright.TestStatusFailed {
+            devReport += fmt.Sprintf(`
+### %s
+- **Duration**: %.3fs
+- **Error**: %s
+- **Screenshots**: %d
+- **Logs**: %d entries
+`, testCase.Name, testCase.Duration.Seconds(), 
+                func() string { 
+                    if testCase.Error != nil { 
+                        return testCase.Error.Error() 
+                    } 
+                    return "No error message" 
+                }(),
+                len(testCase.Screenshots), len(testCase.Logs))
+        }
+    }
+    
+    // Generate manager summary report
+    managerReport := fmt.Sprintf(`# Management Test Summary
+
+## Executive Summary
+Test suite "%s" completed with **%.1f%% success rate**.
+
+## Key Metrics
+- Total test cases executed: **%d**
+- Successful tests: **%d**
+- Failed tests: **%d**
+- Test execution time: **%.1f seconds**
+
+## Status
+%s
+
+## Next Actions
+%s
+`, testResults.SuiteName, 
+        float64(testResults.PassedTests)/float64(testResults.TotalTests)*100,
+        testResults.TotalTests, testResults.PassedTests, testResults.FailedTests,
+        testResults.EndTime.Sub(testResults.StartTime).Seconds(),
+        func() string {
+            if testResults.FailedTests == 0 {
+                return "🟢 All tests passing - system is stable"
+            } else if testResults.FailedTests <= 2 {
+                return "🟡 Minor issues detected - development team investigating"
+            } else {
+                return "🔴 Multiple test failures - immediate attention required"
+            }
+        }(),
+        func() string {
+            if testResults.FailedTests == 0 {
+                return "- Continue with planned deployment\n- Monitor system performance"
+            } else {
+                return "- Development team to investigate failures\n- Hold deployment until issues resolved"
+            }
+        }())
+    
+    // Write team-specific reports
+    devReportFile := filepath.Join(outputDir, "developer-report.md")
+    os.WriteFile(devReportFile, []byte(devReport), 0644)
+    
+    managerReportFile := filepath.Join(outputDir, "manager-summary.md")
+    os.WriteFile(managerReportFile, []byte(managerReport), 0644)
+}
+```
+
+### Trend Analysis Reporting
+
+```go
+func TestTrendAnalysisReporting(t *testing.T) {
+    // Generate trend analysis with historical comparison
+    trendData := fmt.Sprintf(`# Test Trend Analysis
+
+## Current Run
+- **Date**: %s
+- **Success Rate**: %.1f%%
+- **Duration**: %.1fs
+- **Total Tests**: %d
+
+## Historical Comparison
+| Date | Success Rate | Duration | Total Tests | Status |
+|------|-------------|----------|-------------|---------|
+| %s | %.1f%% | %.1fs | %d | Current |
+| 2024-01-15 | 87.5%% | 145.2s | 8 | Previous |
+| 2024-01-14 | 100.0%% | 132.8s | 8 | Baseline |
+| 2024-01-13 | 75.0%% | 167.3s | 8 | Issue Day |
+
+## Trends
+- **Success Rate Trend**: %s
+- **Performance Trend**: %s
+- **Stability**: %s
+
+## Recommendations
+%s
+`, testResults.StartTime.Format("2006-01-02"),
+        float64(testResults.PassedTests)/float64(testResults.TotalTests)*100,
+        testResults.EndTime.Sub(testResults.StartTime).Seconds(),
+        testResults.TotalTests,
+        testResults.StartTime.Format("2006-01-02"),
+        float64(testResults.PassedTests)/float64(testResults.TotalTests)*100,
+        testResults.EndTime.Sub(testResults.StartTime).Seconds(),
+        testResults.TotalTests,
+        // Trend analysis logic...
+        func() string {
+            rate := float64(testResults.PassedTests)/float64(testResults.TotalTests)*100
+            if rate >= 90 {
+                return "📈 Improving (above 90%)"
+            } else if rate >= 75 {
+                return "📊 Stable (75-90%)"
+            } else {
+                return "📉 Declining (below 75%)"
+            }
+        }(),
+        func() string {
+            duration := testResults.EndTime.Sub(testResults.StartTime).Seconds()
+            if duration < 140 {
+                return "⚡ Fast execution (under 140s)"
+            } else if duration < 160 {
+                return "⏱️ Normal execution (140-160s)"
+            } else {
+                return "🐌 Slow execution (over 160s)"
+            }
+        }(),
+        func() string {
+            if testResults.FailedTests == 0 {
+                return "🟢 Highly stable"
+            } else if testResults.FailedTests <= 2 {
+                return "🟡 Moderately stable"
+            } else {
+                return "🔴 Unstable"
+            }
+        }(),
+        func() string {
+            if testResults.FailedTests == 0 {
+                return "- Maintain current quality practices\n- Consider expanding test coverage"
+            } else {
+                return "- Investigate root cause of failures\n- Implement additional monitoring\n- Review test maintenance practices"
+            }
+        }())
+    
+    trendFile := filepath.Join(outputDir, "trend-analysis.md")
+    os.WriteFile(trendFile, []byte(trendData), 0644)
+}
+```
+
 ### Custom Report Templates
 
 ```go
@@ -815,6 +1175,97 @@ func (r *MultiFormatReporter) GenerateReports(results *gowright.TestSuiteResults
 }
 ```
 
+### Assertion-Focused Reporting
+
+```go
+func TestAssertionFocusedReporting(t *testing.T) {
+    // Create test with detailed assertion tracking
+    ta := gowright.NewTestAssertion("Comprehensive API Test")
+    
+    // Perform assertions with detailed logging
+    apiResponse := map[string]interface{}{
+        "status": "success",
+        "data": map[string]interface{}{
+            "user_id": 12345,
+            "name":    "John Doe",
+            "email":   "john.doe@example.com",
+            "active":  true,
+        },
+        "items": []string{"item1", "item2", "item3"},
+    }
+    
+    // API response validation
+    ta.Equal("success", apiResponse["status"], "API should return success status")
+    ta.NotNil(apiResponse["data"], "API response should contain data")
+    ta.Contains(apiResponse["message"].(string), "completed", "Message should indicate completion")
+    ta.Len(apiResponse["items"], 3, "Should return exactly 3 items")
+    
+    // User data validation
+    userData := apiResponse["data"].(map[string]interface{})
+    ta.NotEmpty(userData["name"], "User name should not be empty")
+    ta.True(userData["user_id"].(int) > 0, "User ID should be positive")
+    ta.Contains(userData["email"].(string), "@", "Email should contain @ symbol")
+    ta.Regexp(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`, 
+        userData["email"].(string), "Email should match valid pattern")
+    
+    // Numeric validations
+    userID := userData["user_id"].(int)
+    ta.GreaterThan(userID, 0, "User ID should be greater than 0")
+    ta.LessThan(userID, 100000, "User ID should be less than 100000")
+    ta.InRange(userID, 1, 99999, "User ID should be in valid range")
+    
+    // String validations
+    userName := userData["name"].(string)
+    ta.MinLength(userName, 2, "User name should be at least 2 characters")
+    ta.MaxLength(userName, 50, "User name should not exceed 50 characters")
+    ta.DoesNotContain(userName, "@", "User name should not contain @ symbol")
+    
+    // Generate test result with assertion details
+    status := gowright.TestStatusPassed
+    var testError error
+    if ta.HasFailures() {
+        status = gowright.TestStatusFailed
+        passed, failed := ta.GetSummary()
+        testError = fmt.Errorf("test failed with %d assertion failures out of %d total assertions", 
+            failed, passed+failed)
+    }
+    
+    result := &gowright.TestCaseResult{
+        Name:      "Comprehensive API Test",
+        Status:    status,
+        Duration:  time.Since(startTime),
+        Error:     testError,
+        StartTime: startTime,
+        EndTime:   time.Now(),
+        Logs:      ta.GetLogs(),
+        Steps:     ta.GetSteps(), // Contains individual assertion results
+    }
+    
+    // Generate assertion-focused report
+    config := &gowright.ReportConfig{
+        LocalReports: gowright.LocalReportConfig{
+            HTML: true,
+            JSON: true,
+            OutputDir: "./test-reports/assertions",
+            HTMLConfig: &gowright.HTMLReportConfig{
+                IncludeAssertionDetails: true,
+                ShowAssertionTimeline:   true,
+                GroupAssertionsByType:   true,
+            },
+        },
+    }
+    
+    reportManager := gowright.NewReportManager(config)
+    testResults := &gowright.TestResults{
+        SuiteName: "Assertion-Focused Test Suite",
+        TestCases: []gowright.TestCaseResult{*result},
+    }
+    
+    err := reportManager.GenerateReports(testResults)
+    assert.NoError(t, err)
+}
+```
+
 ## Best Practices
 
 ### 1. Choose Appropriate Report Formats
@@ -903,6 +1354,97 @@ config := &gowright.ReportConfig{
             SanitizeFields:  []string{"password", "token", "secret"},
         },
     },
+}
+```
+
+### 6. Use Multi-Format Reporting for Different Audiences
+
+```go
+// Good - Generate multiple report formats for different stakeholders
+func generateComprehensiveReports(testResults *gowright.TestResults) error {
+    // Standard reports for developers
+    standardConfig := &gowright.ReportConfig{
+        LocalReports: gowright.LocalReportConfig{
+            HTML: true,
+            JSON: true,
+            OutputDir: "./reports/standard",
+        },
+    }
+    
+    // XML/JUnit for CI/CD systems
+    xmlConfig := &gowright.ReportConfig{
+        LocalReports: gowright.LocalReportConfig{
+            XML: true,
+            OutputDir: "./reports/ci-cd",
+            XMLConfig: &gowright.XMLReportConfig{
+                Format: "junit",
+                IncludeStdout: true,
+            },
+        },
+    }
+    
+    // CSV for data analysis
+    csvReporter := NewCSVReporter("./reports/analytics")
+    csvReporter.GenerateTestSummary(testResults)
+    csvReporter.GenerateMetricsReport(testResults)
+    
+    // Team-specific reports
+    teamReporter := NewTeamReporter("./reports/team")
+    teamReporter.GenerateDeveloperReport(testResults)
+    teamReporter.GenerateManagerSummary(testResults)
+    
+    return nil
+}
+```
+
+### 7. Implement Trend Analysis for Continuous Improvement
+
+```go
+// Good - Track test trends over time
+func generateTrendAnalysis(testResults *gowright.TestResults) error {
+    historyManager := gowright.NewTestHistoryManager("./test-history")
+    
+    // Store current results
+    err := historyManager.StoreResults(testResults)
+    if err != nil {
+        return err
+    }
+    
+    // Generate trend analysis
+    trendData, err := historyManager.GetTrendData(30) // Last 30 days
+    if err != nil {
+        return err
+    }
+    
+    trendReporter := NewTrendAnalysisReporter("./reports/trends")
+    return trendReporter.GenerateReport(trendData)
+}
+```
+
+### 8. Customize Reports for Specific Use Cases
+
+```go
+// Good - Create specialized reports for different scenarios
+func generateSpecializedReports(testResults *gowright.TestResults) error {
+    // Performance-focused report
+    if containsPerformanceTests(testResults) {
+        perfReporter := NewPerformanceReporter("./reports/performance")
+        perfReporter.GenerateDashboard(testResults)
+    }
+    
+    // Security-focused report
+    if containsSecurityTests(testResults) {
+        secReporter := NewSecurityReporter("./reports/security")
+        secReporter.GenerateComplianceReport(testResults)
+    }
+    
+    // Accessibility-focused report
+    if containsAccessibilityTests(testResults) {
+        a11yReporter := NewAccessibilityReporter("./reports/accessibility")
+        a11yReporter.GenerateWCAGReport(testResults)
+    }
+    
+    return nil
 }
 ```
 

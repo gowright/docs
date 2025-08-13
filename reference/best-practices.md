@@ -209,3 +209,96 @@ func testService(service ServiceConfig) ServiceTestResult {
 - Maintain service test data and mock responses
 - Monitor service test execution in CI/CD pipelines
 - Update orchestration tests when business processes change
+
+## Development Workflow
+
+### Local Testing Before Commits
+- Always run comprehensive local testing before committing changes
+- Use the MCP server's local testing script to replicate CI/CD pipeline locally
+- Validate both framework and MCP server changes in development environment
+
+### MCP Server Development
+For MCP server development, use the comprehensive local testing script:
+
+```bash
+# Unix/Linux/macOS
+cd mcpserver
+./test-local.sh
+
+# Windows
+cd mcpserver
+test-local.bat
+# or
+npm run test-local-win
+```
+
+This script performs:
+- Node.js version validation (requires 18+)
+- Dependency installation and verification
+- TypeScript type checking and compilation
+- Code formatting validation (if Prettier is configured)
+- Build compilation and executable creation
+- Build validation (verifies executable file exists with proper permissions)
+- Test execution and coverage analysis
+- Package integrity verification
+- Bundle size analysis and optimization checks
+- Code quality analysis (TODO/FIXME comments, console.log usage)
+
+### Framework Development
+For framework development, use the comprehensive Make targets:
+
+```bash
+# Run complete local CI/CD simulation
+make ci
+
+# Individual validation steps
+make test-all          # All test types
+make lint             # Code quality
+make security         # Security scanning
+make examples         # Validate examples
+```
+
+### Example Validation
+Always validate examples before committing:
+
+```bash
+# Comprehensive example validation
+./examples/validate_examples.sh
+```
+
+The validation script checks:
+- **Structure Requirements**: Build tags, package declarations, main functions
+- **Import Validation**: Proper Gowright framework imports
+- **Compilation Testing**: Syntax and dependency verification
+- **Documentation**: README and index files
+- **Script Permissions**: Executable permissions on shell scripts
+
+**Example Structure Requirements:**
+```go
+//go:build ignore
+// +build ignore
+
+// Example: Feature Description
+// This example demonstrates specific functionality.
+
+package main
+
+import (
+    "fmt"
+    "github.com/gowright/framework/pkg/gowright"
+)
+
+func main() {
+    // Example implementation
+}
+```
+
+### Pre-Commit Checklist
+- [ ] Local testing script passes completely
+- [ ] All tests pass (unit, integration, performance)
+- [ ] Code formatting and linting pass
+- [ ] Security scans show no issues
+- [ ] Example validation passes (`./examples/validate_examples.sh`)
+- [ ] Documentation updated for any API changes
+- [ ] Examples updated if functionality changed
+- [ ] Configuration files validated

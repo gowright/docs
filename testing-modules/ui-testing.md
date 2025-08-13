@@ -427,8 +427,12 @@ func TestResponsiveDesign(t *testing.T) {
 
 ### File Upload
 
+Gowright provides comprehensive file upload testing capabilities including single/multiple file uploads, file type validation, size restrictions, drag-and-drop functionality, and upload progress tracking.
+
+#### Basic File Upload
+
 ```go
-func TestFileUpload(t *testing.T) {
+func TestBasicFileUpload(t *testing.T) {
     uiTester := gowright.NewRodUITester()
     // ... initialization
     
@@ -439,6 +443,143 @@ func TestFileUpload(t *testing.T) {
     // Upload multiple files
     files := []string{"./file1.txt", "./file2.txt", "./file3.txt"}
     err = uiTester.UploadFiles("input[type='file'][multiple]", files)
+    assert.NoError(t, err)
+}
+```
+
+#### File Type Validation Testing
+
+```go
+func TestFileTypeValidation(t *testing.T) {
+    uiTester := gowright.NewRodUITester()
+    // ... initialization
+    
+    // Set file type restrictions
+    err := uiTester.ExecuteScript("arguments[0].setAttribute('accept', '.pdf,.jpg,.png')", fileInput)
+    assert.NoError(t, err)
+    
+    // Test valid file type
+    err = uiTester.UploadFile("input[type='file']", "./document.pdf")
+    assert.NoError(t, err)
+    
+    // Test invalid file type (should be rejected)
+    err = uiTester.UploadFile("input[type='file']", "./script.exe")
+    assert.Error(t, err) // Browser should reject this
+}
+```
+
+#### File Size Validation Testing
+
+```go
+func TestFileSizeValidation(t *testing.T) {
+    uiTester := gowright.NewRodUITester()
+    // ... initialization
+    
+    // Add client-side size validation
+    sizeValidationScript := `
+        document.querySelector('input[type="file"]').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.size > 500000) { // 500KB limit
+                alert('File too large! Maximum size is 500KB');
+                e.target.value = '';
+            }
+        });
+    `
+    
+    err := uiTester.ExecuteScript(sizeValidationScript)
+    assert.NoError(t, err)
+    
+    // Test with large file
+    err = uiTester.UploadFile("input[type='file']", "./large-file.txt")
+    assert.NoError(t, err)
+    
+    // Check if validation alert appears
+    alertText, err := uiTester.GetAlertText()
+    if err == nil && alertText != "" {
+        assert.Contains(t, alertText, "File too large")
+        uiTester.AcceptAlert()
+    }
+}
+```
+
+#### Drag and Drop Upload Testing
+
+```go
+func TestDragAndDropUpload(t *testing.T) {
+    uiTester := gowright.NewRodUITester()
+    // ... initialization
+    
+    // Create drag-drop area with JavaScript
+    dragDropScript := `
+        const dropArea = document.createElement('div');
+        dropArea.id = 'drop-area';
+        dropArea.style.cssText = 'width: 300px; height: 200px; border: 2px dashed #ccc; text-align: center; padding: 20px;';
+        dropArea.innerHTML = 'Drag files here';
+        document.body.appendChild(dropArea);
+
+        dropArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.backgroundColor = 'lightgreen';
+            this.innerHTML = 'Files dropped: ' + e.dataTransfer.files.length;
+        });
+    `
+    
+    err := uiTester.ExecuteScript(dragDropScript)
+    assert.NoError(t, err)
+    
+    // Simulate drag and drop
+    dropArea, err := uiTester.FindElement("#drop-area")
+    assert.NoError(t, err)
+    
+    err = uiTester.DragAndDropFile(dropArea, "./test-file.txt")
+    assert.NoError(t, err)
+}
+```
+
+#### Upload Progress Tracking
+
+```go
+func TestUploadProgress(t *testing.T) {
+    uiTester := gowright.NewRodUITester()
+    // ... initialization
+    
+    // Add progress tracking
+    progressScript := `
+        const progressContainer = document.createElement('div');
+        progressContainer.innerHTML = '<div id="progress-bar" style="width: 0%; height: 20px; background: green;"></div><div id="progress-text">0%</div>';
+        document.body.appendChild(progressContainer);
+        
+        // Simulate upload progress
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 10;
+                    document.getElementById('progress-bar').style.width = progress + '%';
+                    document.getElementById('progress-text').textContent = progress + '%';
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        document.getElementById('progress-text').textContent = 'Upload Complete!';
+                    }
+                }, 200);
+            });
+        }
+    `
+    
+    err := uiTester.ExecuteScript(progressScript)
+    assert.NoError(t, err)
+    
+    // Upload file and submit
+    err = uiTester.UploadFile("input[type='file']", "./test-file.txt")
+    assert.NoError(t, err)
+    
+    err = uiTester.Click("input[type='submit']")
+    assert.NoError(t, err)
+    
+    // Wait for progress completion
+    err = uiTester.WaitForText("Upload Complete!", 5*time.Second)
     assert.NoError(t, err)
 }
 ```
@@ -491,6 +632,51 @@ func TestNavigation(t *testing.T) {
     currentURL, err := uiTester.GetCurrentURL()
     assert.NoError(t, err)
     assert.Contains(t, currentURL, "example.com")
+}
+```
+
+### Advanced Navigation Patterns
+
+```go
+func TestAdvancedNavigation(t *testing.T) {
+    uiTester := gowright.NewRodUITester()
+    // ... initialization
+    
+    // URL parameter testing
+    err := uiTester.Navigate("https://example.com/search?q=test&category=all")
+    assert.NoError(t, err)
+    
+    currentURL, err := uiTester.GetCurrentURL()
+    assert.NoError(t, err)
+    assert.Contains(t, currentURL, "q=test")
+    assert.Contains(t, currentURL, "category=all")
+    
+    // Hash fragment navigation
+    err = uiTester.Navigate("https://example.com/docs#section1")
+    assert.NoError(t, err)
+    
+    currentURL, err = uiTester.GetCurrentURL()
+    assert.NoError(t, err)
+    assert.Contains(t, currentURL, "#section1")
+    
+    // Multi-tab handling
+    err = uiTester.Click("a[target='_blank']") // Opens new tab
+    assert.NoError(t, err)
+    
+    // Switch to new tab
+    tabs, err := uiTester.GetAllTabs()
+    assert.NoError(t, err)
+    assert.True(t, len(tabs) > 1)
+    
+    err = uiTester.SwitchToTab(tabs[1])
+    assert.NoError(t, err)
+    
+    // Close current tab and return to main
+    err = uiTester.CloseCurrentTab()
+    assert.NoError(t, err)
+    
+    err = uiTester.SwitchToTab(tabs[0])
+    assert.NoError(t, err)
 }
 ```
 

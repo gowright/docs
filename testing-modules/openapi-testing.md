@@ -78,6 +78,81 @@ func main() {
 
 ## Basic Usage
 
+### Framework Integration
+
+The OpenAPI module integrates seamlessly with the Gowright framework for comprehensive API testing:
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "time"
+    
+    "github.com/gowright/framework/pkg/gowright"
+    "github.com/gowright/framework/pkg/openapi"
+)
+
+func main() {
+    // Initialize Gowright framework with OpenAPI configuration
+    config := gowright.Config{
+        ProjectName: "OpenAPI Validation Demo",
+        Environment: "development",
+        API: gowright.APIConfig{
+            BaseURL: "https://petstore.swagger.io/v2",
+            Timeout: 30 * time.Second,
+        },
+        OpenAPI: gowright.OpenAPIConfig{
+            SpecURL:        "https://petstore.swagger.io/v2/swagger.json",
+            ValidateSchema: true,
+            ValidateParams: true,
+            ValidateResponse: true,
+        },
+        Reporting: gowright.ReportingConfig{
+            Enabled:   true,
+            OutputDir: "reports/openapi-tests",
+            Formats:   []string{"html", "json"},
+        },
+    }
+
+    framework, err := gowright.New(config)
+    if err != nil {
+        log.Fatalf("Failed to create framework: %v", err)
+    }
+    defer framework.Close()
+
+    // Get OpenAPI tester from framework
+    openAPITester, err := framework.OpenAPI()
+    if err != nil {
+        log.Fatalf("Failed to get OpenAPI tester: %v", err)
+    }
+
+    // Load and validate specification
+    spec, err := openAPITester.LoadSpecification()
+    if err != nil {
+        log.Fatalf("Failed to load specification: %v", err)
+    }
+
+    fmt.Printf("Loaded OpenAPI specification: %s v%s\n", 
+        spec.Info.Title, spec.Info.Version)
+    
+    // Validate request schema
+    petData := map[string]interface{}{
+        "name":      "Fluffy",
+        "photoUrls": []string{"https://example.com/photo.jpg"},
+        "status":    "available",
+    }
+    
+    isValid, errors := openAPITester.ValidateRequestSchema("POST", "/pet", petData)
+    if isValid {
+        fmt.Println("✅ Pet data is valid according to OpenAPI schema")
+    } else {
+        fmt.Printf("❌ Pet data validation failed: %v\n", errors)
+    }
+}
+```
+
 ### Simple Validation
 
 ```go
@@ -87,33 +162,36 @@ import (
     "fmt"
     "testing"
     
-    "github.com/gowright/framework/pkg/openapi"
+    "github.com/gowright/framework/pkg/gowright"
     "github.com/stretchr/testify/assert"
 )
 
 func TestOpenAPIValidation(t *testing.T) {
-    // Create OpenAPI tester
-    tester, err := openapi.NewOpenAPITester("./api/openapi.yaml")
+    // Create framework with OpenAPI configuration
+    config := gowright.DefaultConfig()
+    config.OpenAPI.SpecURL = "./api/openapi.yaml"
+    config.OpenAPI.ValidateSchema = true
+    
+    framework, err := gowright.New(config)
+    assert.NoError(t, err)
+    defer framework.Close()
+    
+    // Get OpenAPI tester
+    tester, err := framework.OpenAPI()
     assert.NoError(t, err)
     
-    // Validate the specification
-    result := tester.ValidateSpec()
+    // Load specification
+    spec, err := tester.LoadSpecification()
+    assert.NoError(t, err)
+    assert.NotNil(t, spec.Info, "Specification should have info section")
     
-    // Check validation result
-    assert.True(t, result.Passed, "OpenAPI specification should be valid")
+    // Validate basic structure
+    assert.NotEmpty(t, spec.Info.Title, "API should have a title")
+    assert.NotEmpty(t, spec.Info.Version, "API should have a version")
+    assert.NotEmpty(t, spec.Paths, "API should have paths defined")
     
-    // Print any warnings
-    for _, warning := range result.Warnings {
-        t.Logf("Warning at %s: %s", warning.Path, warning.Message)
-    }
-    
-    // Print any errors
-    for _, err := range result.Errors {
-        t.Errorf("Error at %s: %s", err.Path, err.Message)
-    }
-    
-    fmt.Printf("Validation completed: %d warnings, %d errors\n", 
-        len(result.Warnings), len(result.Errors))
+    fmt.Printf("Validated OpenAPI specification: %s v%s\n", 
+        spec.Info.Title, spec.Info.Version)
 }
 ```
 
@@ -150,6 +228,177 @@ func getStatusString(passed bool) string {
         return "✅ PASSED"
     }
     return "❌ FAILED"
+}
+```
+
+## Comprehensive Validation Capabilities
+
+The Gowright OpenAPI module provides extensive validation capabilities beyond basic specification validation:
+
+### Request and Response Schema Validation
+
+```go
+func TestSchemaValidation(t *testing.T) {
+    framework, err := gowright.New(gowright.DefaultConfig())
+    assert.NoError(t, err)
+    defer framework.Close()
+    
+    tester, err := framework.OpenAPI()
+    assert.NoError(t, err)
+    
+    // Validate request schema
+    requestData := map[string]interface{}{
+        "name":      "Test Pet",
+        "photoUrls": []string{"https://example.com/photo.jpg"},
+        "status":    "available",
+    }
+    
+    isValid, errors := tester.ValidateRequestSchema("POST", "/pet", requestData)
+    assert.True(t, isValid, "Request should be valid")
+    assert.Empty(t, errors, "Should have no validation errors")
+    
+    // Test invalid request
+    invalidRequest := map[string]interface{}{
+        "name": 123, // Should be string
+        // Missing required photoUrls
+    }
+    
+    isValid, errors = tester.ValidateRequestSchema("POST", "/pet", invalidRequest)
+    assert.False(t, isValid, "Invalid request should fail validation")
+    assert.NotEmpty(t, errors, "Should have validation errors")
+}
+```
+
+### Parameter Validation
+
+```go
+func TestParameterValidation(t *testing.T) {
+    framework, err := gowright.New(gowright.DefaultConfig())
+    assert.NoError(t, err)
+    defer framework.Close()
+    
+    tester, err := framework.OpenAPI()
+    assert.NoError(t, err)
+    
+    // Validate path parameters
+    isValid, errors := tester.ValidatePathParameter("GET", "/pet/{petId}", "petId", "12345")
+    assert.True(t, isValid, "Valid path parameter should pass")
+    
+    // Validate query parameters
+    queryParams := map[string]string{
+        "status": "available",
+        "limit":  "10",
+    }
+    
+    isValid, errors = tester.ValidateQueryParameters("GET", "/pet/findByStatus", queryParams)
+    assert.True(t, isValid, "Valid query parameters should pass")
+    
+    // Test invalid query parameter
+    invalidParams := map[string]string{
+        "status": "invalid-status", // Not in enum
+    }
+    
+    isValid, errors = tester.ValidateQueryParameters("GET", "/pet/findByStatus", invalidParams)
+    assert.False(t, isValid, "Invalid query parameter should fail")
+}
+```
+
+### Response Validation
+
+```go
+func TestResponseValidation(t *testing.T) {
+    framework, err := gowright.New(gowright.DefaultConfig())
+    assert.NoError(t, err)
+    defer framework.Close()
+    
+    apiTester, err := framework.API()
+    assert.NoError(t, err)
+    
+    openAPITester, err := framework.OpenAPI()
+    assert.NoError(t, err)
+    
+    // Make API call
+    resp, err := apiTester.GET("/pet/findByStatus?status=available")
+    assert.NoError(t, err)
+    
+    // Validate response status
+    expectedCodes := []int{200}
+    isValid := openAPITester.ValidateResponseStatus("GET", "/pet/findByStatus", resp.StatusCode, expectedCodes)
+    assert.True(t, isValid, "Response status should be valid")
+    
+    // Validate response headers
+    expectedHeaders := map[string]string{
+        "Content-Type": "application/json",
+    }
+    isValid = openAPITester.ValidateResponseHeaders("GET", "/pet/findByStatus", resp.Headers, expectedHeaders)
+    assert.True(t, isValid, "Response headers should be valid")
+    
+    // Validate response schema
+    var responseBody interface{}
+    err = resp.JSON(&responseBody)
+    assert.NoError(t, err)
+    
+    isValid, errors := openAPITester.ValidateResponseSchema("GET", "/pet/findByStatus", resp.StatusCode, responseBody)
+    assert.True(t, isValid, "Response schema should be valid")
+    assert.Empty(t, errors, "Should have no schema errors")
+}
+```
+
+### Security Validation
+
+```go
+func TestSecurityValidation(t *testing.T) {
+    framework, err := gowright.New(gowright.DefaultConfig())
+    assert.NoError(t, err)
+    defer framework.Close()
+    
+    tester, err := framework.OpenAPI()
+    assert.NoError(t, err)
+    
+    // Check if operation requires security
+    requiresSecurity := tester.IsSecurityRequired("POST", "/pet")
+    t.Logf("POST /pet requires security: %v", requiresSecurity)
+    
+    // Load specification to check security schemes
+    spec, err := tester.LoadSpecification()
+    assert.NoError(t, err)
+    
+    if spec.SecurityDefinitions != nil {
+        for name, scheme := range spec.SecurityDefinitions {
+            t.Logf("Security scheme: %s (type: %s)", name, scheme.Type)
+        }
+    }
+    
+    if spec.Components.SecuritySchemes != nil {
+        for name, scheme := range spec.Components.SecuritySchemes {
+            t.Logf("Security scheme: %s (type: %s)", name, scheme.Type)
+        }
+    }
+}
+```
+
+### Data Type and Format Validation
+
+```go
+func TestDataTypeValidation(t *testing.T) {
+    framework, err := gowright.New(gowright.DefaultConfig())
+    assert.NoError(t, err)
+    defer framework.Close()
+    
+    tester, err := framework.OpenAPI()
+    assert.NoError(t, err)
+    
+    // Test data type validation
+    assert.True(t, tester.ValidateDataType(12345, "integer"))
+    assert.False(t, tester.ValidateDataType("12345", "integer"))
+    assert.True(t, tester.ValidateDataType("test", "string"))
+    assert.False(t, tester.ValidateDataType(123, "string"))
+    
+    // Test format validation
+    assert.True(t, tester.ValidateFormat("test@example.com", "email"))
+    assert.False(t, tester.ValidateFormat("not-an-email", "email"))
+    assert.True(t, tester.ValidateFormat("2023-12-25", "date"))
+    assert.False(t, tester.ValidateFormat("not-a-date", "date"))
 }
 ```
 

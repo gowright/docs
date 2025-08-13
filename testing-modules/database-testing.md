@@ -317,6 +317,8 @@ func TestDeleteOperations(t *testing.T) {
 
 ## Transaction Management
 
+The Gowright framework provides comprehensive transaction management capabilities including basic transactions, rollbacks, savepoints, isolation testing, deadlock handling, and performance optimization.
+
 ### Basic Transactions
 
 ```go
@@ -347,6 +349,81 @@ func TestTransactions(t *testing.T) {
         "tx@example.com")
     assert.NoError(t, err)
     assert.Equal(t, 1, rows[0]["count"])
+}
+```
+
+### Advanced Transaction Testing
+
+```go
+func TestAdvancedTransactions(t *testing.T) {
+    config := &gowright.DatabaseConfig{
+        Connections: map[string]*gowright.DBConnection{
+            "primary": {
+                Driver:       "sqlite3",
+                DSN:          ":memory:",
+                MaxOpenConns: 10,
+                MaxIdleConns: 5,
+            },
+        },
+    }
+
+    tester := gowright.NewDatabaseTester(config)
+    err := tester.Initialize(config)
+    assert.NoError(t, err)
+    defer tester.Cleanup()
+
+    // Test transaction commit with balance transfer
+    commitTest := gowright.NewDatabaseTest("Transaction Commit Test", "primary")
+    
+    commitTest.AddSetupQuery(`
+        CREATE TABLE accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(100) NOT NULL,
+            balance DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+
+    commitTest.AddSetupQuery(`
+        INSERT INTO accounts (name, balance) VALUES 
+        ('Alice', 1000.00),
+        ('Bob', 500.00)
+    `)
+
+    // Execute transaction
+    commitTest.AddSetupQuery(`
+        BEGIN TRANSACTION;
+        UPDATE accounts SET balance = balance - 100.00 WHERE name = 'Alice';
+        UPDATE accounts SET balance = balance + 100.00 WHERE name = 'Bob';
+        COMMIT;
+    `)
+
+    commitTest.SetQuery("SELECT name, balance FROM accounts ORDER BY name")
+    commitTest.SetExpectedRowCount(2)
+    
+    commitTest.AddCustomAssertion(func(rows []map[string]interface{}) error {
+        expectedBalances := map[string]float64{
+            "Alice": 900.00,
+            "Bob":   600.00,
+        }
+        
+        for _, row := range rows {
+            name := row["name"].(string)
+            balance := row["balance"].(float64)
+            
+            if expectedBalance, exists := expectedBalances[name]; exists {
+                if balance != expectedBalance {
+                    return fmt.Errorf("expected %s balance to be %.2f, got %.2f", 
+                        name, expectedBalance, balance)
+                }
+            }
+        }
+        
+        return nil
+    })
+
+    result := commitTest.Execute(tester)
+    assert.Equal(t, gowright.TestStatusPassed, result.Status)
 }
 ```
 
@@ -384,7 +461,7 @@ func TestTransactionRollback(t *testing.T) {
 }
 ```
 
-### Savepoints
+### Savepoints (Nested Transactions)
 
 ```go
 func TestSavepoints(t *testing.T) {
@@ -422,6 +499,281 @@ func TestSavepoints(t *testing.T) {
     assert.NoError(t, err)
     assert.Len(t, rows, 1)
     assert.Equal(t, "User 1", rows[0]["name"])
+}
+```
+
+### Complex Savepoint Testing
+
+```go
+func TestComplexSavepoints(t *testing.T) {
+    savepointTest := gowright.NewDatabaseTest("Savepoint Test", "primary")
+    
+    // Setup accounts table
+    savepointTest.AddSetupQuery(`
+        CREATE TABLE accounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(100) NOT NULL,
+            balance DECIMAL(10,2) NOT NULL DEFAULT 0.00
+        )
+    `)
+
+    savepointTest.AddSetupQuery(`
+        INSERT INTO accounts (name, balance) VALUES 
+        ('Alice', 900.00),
+        ('Bob', 600.00)
+    `)
+    
+    // Complex nested transaction with savepoints
+    savepointTest.AddSetupQuery(`
+        BEGIN TRANSACTION;
+        UPDATE accounts SET balance = balance - 50.00 WHERE name = 'Alice';
+        SAVEPOINT sp1;
+        UPDATE accounts SET balance = balance - 100.00 WHERE name = 'Alice';
+        ROLLBACK TO SAVEPOINT sp1;
+        UPDATE accounts SET balance = balance + 25.00 WHERE name = 'Bob';
+        COMMIT;
+    `)
+
+    savepointTest.SetQuery("SELECT name, balance FROM accounts ORDER BY name")
+    savepointTest.SetExpectedRowCount(2)
+    
+    savepointTest.AddCustomAssertion(func(rows []map[string]interface{}) error {
+        expectedBalances := map[string]float64{
+            "Alice": 850.00, // 900 - 50 (first update committed, second rolled back)
+            "Bob":   625.00, // 600 + 25 (update after savepoint committed)
+        }
+        
+        for _, row := range rows {
+            name := row["name"].(string)
+            balance := row["balance"].(float64)
+            
+            if expectedBalance, exists := expectedBalances[name]; exists {
+                if balance != expectedBalance {
+                    return fmt.Errorf("with savepoints, expected %s balance to be %.2f, got %.2f", 
+                        name, expectedBalance, balance)
+                }
+            }
+        }
+        
+        return nil
+    })
+
+    result := savepointTest.Execute(tester)
+    assert.Equal(t, gowright.TestStatusPassed, result.Status)
+}
+```
+
+### Transaction Isolation Testing
+
+```go
+func TestTransactionIsolation(t *testing.T) {
+    isolationTest := gowright.NewDatabaseTest("Transaction Isolation Test", "primary")
+    
+    // Create transaction log table
+    isolationTest.AddSetupQuery(`
+        CREATE TABLE transaction_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            transaction_id VARCHAR(50),
+            action VARCHAR(100),
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+
+    // Simulate concurrent transactions
+    isolationTest.AddSetupQuery(`
+        INSERT INTO transaction_log (transaction_id, action) VALUES ('tx1', 'BEGIN');
+        INSERT INTO transaction_log (transaction_id, action) VALUES ('tx1', 'UPDATE accounts SET balance = balance - 75 WHERE name = ''Alice''');
+        INSERT INTO transaction_log (transaction_id, action) VALUES ('tx2', 'BEGIN');
+        INSERT INTO transaction_log (transaction_id, action) VALUES ('tx2', 'SELECT balance FROM accounts WHERE name = ''Alice''');
+        INSERT INTO transaction_log (transaction_id, action) VALUES ('tx1', 'COMMIT');
+        INSERT INTO transaction_log (transaction_id, action) VALUES ('tx2', 'COMMIT');
+    `)
+
+    isolationTest.SetQuery("SELECT COUNT(*) as log_count FROM transaction_log")
+    isolationTest.SetExpectedRowCount(1)
+    isolationTest.SetExpectedColumnValue("log_count", 6)
+
+    result := isolationTest.Execute(tester)
+    assert.Equal(t, gowright.TestStatusPassed, result.Status)
+}
+```
+
+### Deadlock Detection and Handling
+
+```go
+func TestDeadlockHandling(t *testing.T) {
+    deadlockTest := gowright.NewDatabaseTest("Deadlock Handling Test", "primary")
+    
+    // Create resources table for deadlock simulation
+    deadlockTest.AddSetupQuery(`
+        CREATE TABLE resources (
+            id INTEGER PRIMARY KEY,
+            name VARCHAR(50),
+            value INTEGER
+        )
+    `)
+
+    deadlockTest.AddSetupQuery(`
+        INSERT INTO resources (id, name, value) VALUES 
+        (1, 'Resource A', 100),
+        (2, 'Resource B', 200)
+    `)
+
+    // Simulate potential deadlock scenario
+    deadlockTest.AddSetupQuery(`
+        BEGIN TRANSACTION;
+        UPDATE resources SET value = value + 10 WHERE id = 1;
+        UPDATE resources SET value = value - 5 WHERE id = 2;
+        COMMIT;
+    `)
+
+    deadlockTest.SetQuery("SELECT id, name, value FROM resources ORDER BY id")
+    deadlockTest.SetExpectedRowCount(2)
+    
+    deadlockTest.AddCustomAssertion(func(rows []map[string]interface{}) error {
+        expectedValues := map[int64]int64{
+            1: 110, // 100 + 10
+            2: 195, // 200 - 5
+        }
+        
+        for _, row := range rows {
+            id := row["id"].(int64)
+            value := row["value"].(int64)
+            
+            if expectedValue, exists := expectedValues[id]; exists {
+                if value != expectedValue {
+                    return fmt.Errorf("expected resource %d value to be %d, got %d", 
+                        id, expectedValue, value)
+                }
+            }
+        }
+        
+        return nil
+    })
+
+    result := deadlockTest.Execute(tester)
+    assert.Equal(t, gowright.TestStatusPassed, result.Status)
+}
+```
+
+### Long-Running Transaction Testing
+
+```go
+func TestLongRunningTransactions(t *testing.T) {
+    longTxTest := gowright.NewDatabaseTest("Long Transaction Test", "primary")
+    
+    // Create batch operations table
+    longTxTest.AddSetupQuery(`
+        CREATE TABLE batch_operations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            batch_id VARCHAR(50),
+            operation VARCHAR(100),
+            processed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+
+    // Insert multiple records in a single transaction
+    longTxTest.AddSetupQuery("BEGIN TRANSACTION")
+    
+    for i := 1; i <= 100; i++ {
+        longTxTest.AddSetupQuery(fmt.Sprintf(
+            "INSERT INTO batch_operations (batch_id, operation) VALUES ('batch_001', 'operation_%d')",
+            i,
+        ))
+    }
+    
+    longTxTest.AddSetupQuery("COMMIT")
+
+    longTxTest.SetQuery("SELECT COUNT(*) as operation_count FROM batch_operations WHERE batch_id = 'batch_001'")
+    longTxTest.SetExpectedRowCount(1)
+    longTxTest.SetExpectedColumnValue("operation_count", 100)
+
+    result := longTxTest.Execute(tester)
+    assert.Equal(t, gowright.TestStatusPassed, result.Status)
+}
+```
+
+### Multi-Database Transaction Testing
+
+```go
+func TestMultiDatabaseTransactions(t *testing.T) {
+    multiDbTest := gowright.NewDatabaseTest("Multi-database Transaction Test", "secondary")
+    
+    // Setup audit table in secondary database
+    multiDbTest.AddSetupQuery(`
+        CREATE TABLE IF NOT EXISTS audit_trail (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            table_name VARCHAR(50),
+            operation VARCHAR(20),
+            record_id INTEGER,
+            old_values TEXT,
+            new_values TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+
+    // Simulate audit logging for account transactions
+    multiDbTest.AddSetupQuery(`
+        INSERT INTO audit_trail (table_name, operation, record_id, old_values, new_values) VALUES 
+        ('accounts', 'UPDATE', 1, '{"balance": 900.00}', '{"balance": 850.00}'),
+        ('accounts', 'UPDATE', 2, '{"balance": 600.00}', '{"balance": 625.00}')
+    `)
+
+    multiDbTest.SetQuery("SELECT COUNT(*) as audit_count FROM audit_trail WHERE table_name = 'accounts'")
+    multiDbTest.SetExpectedRowCount(1)
+    multiDbTest.SetExpectedColumnValue("audit_count", 2)
+
+    result := multiDbTest.Execute(tester)
+    assert.Equal(t, gowright.TestStatusPassed, result.Status)
+}
+```
+
+### Transaction Performance Testing
+
+```go
+func TestTransactionPerformance(t *testing.T) {
+    performanceTest := gowright.NewDatabaseTest("Transaction Performance Test", "primary")
+    
+    // Create performance test table
+    performanceTest.AddSetupQuery(`
+        CREATE TABLE performance_test (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data VARCHAR(100),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+
+    // Measure transaction performance
+    startTime := time.Now()
+    
+    performanceTest.AddSetupQuery("BEGIN TRANSACTION")
+    
+    // Insert many records in single transaction
+    for i := 1; i <= 1000; i++ {
+        performanceTest.AddSetupQuery(fmt.Sprintf(
+            "INSERT INTO performance_test (data) VALUES ('performance_data_%d')",
+            i,
+        ))
+    }
+    
+    performanceTest.AddSetupQuery("COMMIT")
+    
+    performanceTest.SetQuery("SELECT COUNT(*) as record_count FROM performance_test")
+    performanceTest.SetExpectedRowCount(1)
+    performanceTest.SetExpectedColumnValue("record_count", 1000)
+    
+    performanceTest.AddCustomAssertion(func(rows []map[string]interface{}) error {
+        duration := time.Since(startTime)
+        if duration > 10*time.Second {
+            return fmt.Errorf("transaction took too long: %v", duration)
+        }
+        
+        fmt.Printf("   Transaction completed in: %v\n", duration)
+        return nil
+    })
+
+    result := performanceTest.Execute(tester)
+    assert.Equal(t, gowright.TestStatusPassed, result.Status)
 }
 ```
 

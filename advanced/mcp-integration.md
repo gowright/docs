@@ -769,6 +769,45 @@ export class CustomValidator implements MCPPlugin {
 
 ### Integration with CI/CD
 
+The MCP server includes automated GitHub Actions workflows for continuous integration and publishing.
+
+#### GitHub Actions Workflows
+
+The MCP server repository includes two main workflows:
+
+**1. Continuous Integration (`ci.yml`)**
+- Runs on every push and pull request to main/develop branches
+- Tests build process across Node.js versions 18 and 20
+- Validates TypeScript compilation and package integrity
+- Runs automated tests when available
+
+**2. Publishing (`publish.yml`)**
+- Automatically publishes to npm when git tags starting with `v` are pushed
+- Can be manually triggered via GitHub Actions UI with version bump selection
+- Creates GitHub releases with installation instructions and MCP configuration examples
+
+#### Setting Up GitHub Actions
+
+To enable automated publishing for your MCP server fork:
+
+1. **Add NPM Token Secret**:
+   - Go to [npm.com](https://www.npmjs.com) → Account → Access Tokens
+   - Create a new "Automation" token
+   - Add it as `NPM_TOKEN` repository secret in GitHub
+
+2. **Publishing Process**:
+   ```bash
+   # Automatic publishing (recommended)
+   git tag v1.0.1
+   git push origin v1.0.1
+   
+   # Manual publishing via GitHub Actions UI
+   # Go to Actions → Publish MCP Server → Run workflow
+   # Select version bump type (patch/minor/major)
+   ```
+
+#### Using MCP Server in CI/CD
+
 Configure MCP server for CI/CD environments:
 
 ```yaml
@@ -809,6 +848,44 @@ jobs:
           uvx gowright-mcp-server@latest run_test \
             --test_file=./generated_test.go \
             --parallel=true
+```
+
+#### Local Testing Before Publishing
+
+Before pushing tags, use the comprehensive local testing script:
+
+```bash
+cd mcpserver
+./test-local.sh
+```
+
+This script replicates the entire CI/CD pipeline locally, including:
+- Node.js version validation (18+ required)
+- Build compilation and executable creation
+- Build validation (verifies executable file exists and has proper permissions)
+- TypeScript type checking and code formatting validation
+- Test execution and coverage
+- Package integrity verification
+- MCP server functionality testing
+- Code quality analysis and bundle size checks
+
+For manual testing, you can run individual commands:
+
+```bash
+cd mcpserver
+npm ci
+npm run build
+chmod +x dist/index.js
+
+# Validate build output
+if [ -f "dist/index.js" ] && [ -x "dist/index.js" ]; then
+    echo "Build validation passed - executable created"
+else
+    echo "Build validation failed - executable not found or not executable"
+    exit 1
+fi
+
+npm pack --dry-run
 ```
 
 ---

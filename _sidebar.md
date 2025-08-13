@@ -27,6 +27,8 @@
   * [MCP Integration](advanced/mcp-integration.md)
 
 * Examples
+  * [Running Examples](examples/running-examples.md)
+  * [Getting Started Examples](examples/getting-started.md)
   * [Basic Usage](examples/basic-usage.md)
   * [API Testing Examples](examples/api-testing.md)
   * [UI Testing Examples](examples/ui-testing.md)
@@ -34,6 +36,9 @@
   * [OpenAPI Testing Examples](examples/openapi-testing.md)
   * [Database Examples](examples/database-testing.md)
   * [Integration Examples](examples/integration-testing.md)
+  * [Advanced Patterns](examples/advanced-patterns.md)
+  * [Reporting Examples](examples/reporting.md)
+  * [CI/CD Integration](examples/cicd.md)
   * [Modular Usage Examples](examples/modular-usage.md)
   * [Integration Flow Diagrams](examples/integration-flow-diagrams.md)
 
@@ -47,4 +52,5 @@
 * Contributing
   * [Development Setup](contributing/development.md)
   * [Contributing Guide](contributing/guide.md)
+  * [Deployment & CI/CD](contributing/deployment.md)
   * [Changelog](contributing/changelog.md)
